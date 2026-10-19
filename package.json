@@ -1,0 +1,30 @@
+{
+  "name": "gcbuild",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Click-to-build config generator for gcsim with KQMS substats and a rotation timeline helper",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -b",
+    "extract": "python -I scripts/extract_gcsim.py ../gcsim src/data/gcsim.json",
+    "smoke": "tsx scripts/smoke.ts",
+    "import-check": "tsx scripts/import-check.ts",
+    "setup:gcsim": "node scripts/setup-gcsim.mjs"
+  },
+  "dependencies": {
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "5.2.0",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "vite": "7.3.7"
+  }
+}

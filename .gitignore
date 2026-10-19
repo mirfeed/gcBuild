@@ -1,0 +1,20 @@
+# dependencies / build output
+node_modules/
+dist/
+*.tsbuildinfo
+.vite/
+
+# gcsim CLI (downloaded by setup.bat / the app)
+tools/
+
+# your saved teams (remove this line if you want them in the repo)
+teams/
+
+# local / editor / OS files
+*.local
+.env*
+.vscode/
+.idea/
+*.log
+Thumbs.db
+.DS_Store
