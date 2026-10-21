@@ -115,6 +115,126 @@ export function cloneWithIds(x: RotItem, newId: () => string): RotItem {
   return c;
 }
 
+// ------------------------------------------------------------------ notation
+
+const LETTER: Record<string, string> = {
+  charge: 'C', dash: 'D', jump: 'J', skill: 'E', burst: 'Q', aim: 'A', high_plunge: 'P', low_plunge: 'LP', walk: 'W', swap: 'S',
+};
+
+function actionNotation(a: RotationAction): string {
+  if (a.action === 'wait' || a.action === 'delay') return ` ${a.action}${a.frames ?? 0} `;
+  if (a.action === 'attack') return `N${Math.max(1, a.repeat)}`;
+  const letter = a.action === 'skill' && a.params?.hold ? 'hE' : LETTER[a.action] ?? a.action;
+  const s = letter.repeat(Math.max(1, a.repeat));
+  return a.cond ? `${s}?` : s;
+}
+
+function charsIn(items: RotItem[], out = new Set<string>()): Set<string> {
+  walkItems(items, (x) => {
+    if (isAction(x) && x.char) out.add(x.char);
+  });
+  return out;
+}
+
+/** The single character acting in a fragment ('' when none or several). */
+export function soleChar(items: RotItem[]): string {
+  const c = [...charsIn(items)];
+  return c.length === 1 ? c[0] : '';
+}
+
+/** Character of the last action in a fragment (in order; for `if` the then branch). */
+export function lastChar(x: RotItem): string {
+  if (isAction(x)) return x.char;
+  if (x.kind === 'raw') return '';
+  const list = x.kind === 'if' ? x.then : x.body;
+  for (let i = list.length - 1; i >= 0; i--) {
+    const c = lastChar(list[i]);
+    if (c) return c;
+  }
+  return '';
+}
+
+/** "N2CDN2CDN2CD" -> "3(N2CD)" when a run is one combo repeated. */
+function compress(run: string): string {
+  for (let len = 2; len <= run.length / 2; len++) {
+    if (run.length % len) continue;
+    const unit = run.slice(0, len);
+    if (/^\d/.test(unit) || (/\d$/.test(unit) && /^\d/.test(run.slice(len)))) continue;
+    if (unit.repeat(run.length / len) === run) return `${run.length / len}(${unit})`;
+  }
+  return run;
+}
+
+/**
+ * Compact rotation notation, e.g. "10(N2CD)" for repeat 10 x (N2, CA, dash) and
+ * "E 10(N2CD) Q" around it. Character keys are added when several characters act.
+ */
+export interface NotationFormat {
+  /** how a character is written (default: gcsim key) */
+  name?: (key: string) => string;
+  /** separator between character parts (default " · ") */
+  sep?: string;
+}
+
+export function notation(items: RotItem[], showChars = charsIn(items).size > 1, fmt: NotationFormat = {}): string {
+  const nameOf = fmt.name ?? ((k: string) => k);
+  const parts: string[] = [];
+  let curChar = '';
+  let tokens: string[] = [];
+  let run = '';
+  const endRun = () => {
+    if (run.trim()) tokens.push(...run.trim().split(/\s+/).map(compress));
+    run = '';
+  };
+  const flush = () => {
+    endRun();
+    if (tokens.length) parts.push(`${showChars && curChar ? `${nameOf(curChar)} ` : ''}${tokens.join(' ')}`);
+    tokens = [];
+  };
+  for (const x of items) {
+    if (isAction(x)) {
+      if (x.char && x.char !== curChar) {
+        flush();
+        curChar = x.char;
+      }
+      run += actionNotation(x);
+    } else if (x.kind === 'repeat') {
+      const chars = [...charsIn(x.body)];
+      if (chars.length > 1) {
+        flush();
+        curChar = '';
+        parts.push(`${x.count}(${notation(x.body, true, fmt)})`);
+        continue;
+      }
+      const token = `${x.count}(${notation(x.body, false, fmt)})`;
+      if (chars.length === 1 && chars[0] !== curChar) {
+        flush();
+        curChar = chars[0];
+      }
+      endRun();
+      tokens.push(token);
+    } else if (x.kind === 'if') {
+      // branches acting with the same character as before the block don't repeat its name
+      const before = curChar;
+      const sole = soleChar([...x.then, ...x.else]);
+      const same = !!sole && sole === before;
+      flush();
+      curChar = same ? before : '';
+      const t = notation(x.then, showChars && !same, fmt) || '-';
+      const e = notation(x.else, showChars && !same, fmt);
+      const block = `[${t}${e ? ` | ${e}` : ''}]?`;
+      if (same) parts[parts.length - 1] = `${parts[parts.length - 1] ?? ''} ${block}`.trim();
+      else parts.push(block);
+    } else {
+      flush();
+      curChar = '';
+      parts.push('script');
+    }
+  }
+  flush();
+  return parts.join(fmt.sep ?? ' · ');
+}
+
 // ------------------------------------------------------------------ conditions
 
 export function clauseToScript(c: Clause): string {

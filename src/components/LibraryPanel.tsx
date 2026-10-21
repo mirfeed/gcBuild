@@ -83,6 +83,17 @@ export function LibraryPanel({ library, project, onUse, onClose }: Props) {
         <button type="button" className="icon-btn" onClick={onClose} title="Close">✕</button>
       </div>
 
+      {library.backup.length > 0 && (
+        <div className="hint warn small lib-result">
+          <div>This browser had a different build list ({library.backup.length} builds) than the userdata folder ({library.items.length}).</div>
+          <span className="row tight">
+            <button type="button" className="btn primary small" onClick={() => confirm(`Replace the current ${library.items.length} builds with the ${library.backup.length} from the browser backup?`) && library.restoreBackup()}>
+              Restore {library.backup.length} from browser backup
+            </button>
+            <button type="button" className="btn ghost small" onClick={library.dropBackup}>Dismiss</button>
+          </span>
+        </div>
+      )}
       {filtered.length ? (
         <div className="lib-grid">
           {filtered.map((x) => (

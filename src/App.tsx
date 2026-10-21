@@ -3,6 +3,7 @@ import { ArtifactsPanel } from './components/Artifacts';
 import { CharCard } from './components/CharCard';
 import { ConfigPanel } from './components/ConfigPanel';
 import { LibraryPanel } from './components/LibraryPanel';
+import { EnkaPanel } from './components/EnkaPanel';
 import { TeamsPanel } from './components/TeamsPanel';
 import { endOf, insertAt, paletteFor, RotationBuilder, type Cursor } from './components/RotationBuilder';
 import { SimPanel } from './components/SimPanel';
@@ -45,6 +46,7 @@ export default function App() {
   const library = useLibrary();
   const [artsOpen, setArtsOpen] = useState(false);
   const [teamsOpen, setTeamsOpen] = useState(false);
+  const [enkaOpen, setEnkaOpen] = useState(false);
   const inventory = useInventory();
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -260,6 +262,9 @@ export default function App() {
           <button type="button" className={`btn ${teamsOpen ? 'primary' : 'ghost'}`} onClick={() => setTeamsOpen((v) => !v)} title="Save / load teams in the project's teams/ folder">
             Teams
           </button>
+          <button type="button" className={`btn ${enkaOpen ? 'primary' : 'ghost'}`} onClick={() => setEnkaOpen((v) => !v)} title="Import characters from Enka.Network by UID">
+            Enka
+          </button>
           <button type="button" className={`btn ${artsOpen ? 'primary' : 'ghost'}`} onClick={() => setArtsOpen((v) => !v)}>
             Artifacts{inventory.items.length ? ` (${inventory.items.length})` : ''}
           </button>
@@ -285,6 +290,7 @@ export default function App() {
 
       {importOpen && <ImportBox onImport={doImport} onClose={() => setImportOpen(false)} />}
       {teamsOpen && <TeamsPanel project={project} onLoad={loadProject} onClose={() => setTeamsOpen(false)} />}
+      {enkaOpen && <EnkaPanel project={project} library={library} inventory={inventory} onUse={applyBuild} onClose={() => setEnkaOpen(false)} />}
       {artsOpen && <ArtifactsPanel inventory={inventory} usedBy={usedBy} onClose={() => setArtsOpen(false)} />}
       {libOpen && <LibraryPanel library={library} project={project} onUse={applyBuild} onClose={() => setLibOpen(false)} />}
       {importMsg.length > 0 && (

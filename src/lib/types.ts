@@ -29,6 +29,10 @@ export interface CharData {
   notes: Record<string, string>;
   frames: Record<string, FrameSlice>;
   statuses: { name: string; on: 'skill' | 'burst'; dur: number }[];
+  /** game avatar id / skill depot (travelers) / talent skill ids, for Enka.Network imports */
+  gameId: number;
+  depot: number;
+  skillIds: { attack: number; skill: number; burst: number };
 }
 
 export interface WeaponData {
@@ -39,6 +43,7 @@ export interface WeaponData {
   stats: Partial<Record<Stat, number>>;
   params: Record<string, string>;
   aliases: string[];
+  gameId: number;
 }
 
 export interface SetData {
@@ -46,6 +51,8 @@ export interface SetData {
   name: string;
   params: Record<string, string>;
   aliases: string[];
+  /** set name text hash (Enka's setNameTextMapHash) */
+  textMapId: string;
 }
 
 export type ActionType =
@@ -150,6 +157,8 @@ export interface IfBlock {
   cond: Condition;
   then: RotItem[];
   else: RotItem[];
+  /** UI only: shown as a one-line summary */
+  collapsed?: boolean;
 }
 
 export interface RepeatBlock {
@@ -157,6 +166,8 @@ export interface RepeatBlock {
   id: string;
   count: number;
   body: RotItem[];
+  /** UI only: shown as a one-line summary */
+  collapsed?: boolean;
 }
 
 /** verbatim gcsim script the builder doesn't model (functions, switch, ...) */

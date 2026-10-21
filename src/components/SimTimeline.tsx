@@ -3,6 +3,7 @@ import { ELEMENT_COLORS } from '../data';
 import { charIcon } from '../data/icons';
 import { getChar } from '../data';
 import type { SampleTimeline, SBar } from '../lib/sample';
+import { useTimelineNav } from '../lib/useTimelineNav';
 import { Icon } from './Combobox';
 
 interface Props {
@@ -57,6 +58,7 @@ export function SimTimeline({ tl }: Props) {
   const [show, setShow] = useState({ damage: true, energy: true, hp: true, statuses: true, cooldowns: true, icds: false });
   const [hover, setHover] = useState<{ x: number; frame: number } | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
+  const fit = useTimelineNav(scroller, pxPerSec, setPx, 3, 300);
   const x = (f: number) => (f / 60) * pxPerSec;
   const width = Math.ceil((tl.end / 60 + 1) * pxPerSec);
   const tickEvery = pxPerSec >= 40 ? 1 : pxPerSec >= 20 ? 2 : 5;
@@ -152,8 +154,10 @@ export function SimTimeline({ tl }: Props) {
       <div className="tl-controls">
         <label className="field inline">
           <span>Zoom</span>
-          <input type="range" min={8} max={200} value={pxPerSec} onChange={(e) => setPx(+e.target.value)} />
+          <input type="range" min={3} max={300} value={pxPerSec} onChange={(e) => setPx(+e.target.value)} />
         </label>
+        <button type="button" className="btn ghost small" onClick={() => fit(tl.end / 60 + 1)} title="Fit the whole sample in view">Fit</button>
+        <span className="muted small">drag to pan · Ctrl+wheel to zoom</span>
         <label className="field inline" title="Hide statuses shorter than this">
           <span>Min status</span>
           <select value={minDur} onChange={(e) => setMinDur(+e.target.value)}>

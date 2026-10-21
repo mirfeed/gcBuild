@@ -1,5 +1,6 @@
-/** Personal build library, persisted in localStorage (separate from the current project). */
-import { useCallback, useState } from 'react';
+/** Personal build library, saved to userdata/library.json (separate from the current project). */
+import { useCallback } from 'react';
+import { useStoredList } from './persist';
 import { uid } from './project';
 import type { CharBuild } from './types';
 
@@ -11,39 +12,18 @@ export interface SavedBuild {
   build: CharBuild;
 }
 
-const KEY = 'gcbuild.library.v2';
 /** v1 held builds made by the old character-level GOOD import; they are discarded. */
-const OLD_KEYS = ['gcbuild.library.v1'];
-
-function read(): SavedBuild[] {
-  try {
-    for (const k of OLD_KEYS) localStorage.removeItem(k);
-    const raw = localStorage.getItem(KEY);
-    const list = raw ? (JSON.parse(raw) as SavedBuild[]) : [];
-    return Array.isArray(list) ? list.filter((x) => x && x.build && x.build.key) : [];
-  } catch {
-    return [];
-  }
+try {
+  localStorage.removeItem('gcbuild.library.v1');
+} catch {
+  // storage unavailable
 }
 
-function write(list: SavedBuild[]) {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(list));
-  } catch {
-    // quota / privacy mode: keep the in-memory copy
-  }
-}
+const isSaved = (x: SavedBuild) => !!x && !!x.build && !!x.build.key;
 
+/** Library saved to userdata/library.json (with a browser cache). */
 export function useLibrary() {
-  const [items, setItems] = useState<SavedBuild[]>(read);
-
-  const commit = useCallback((fn: (list: SavedBuild[]) => SavedBuild[]) => {
-    setItems((cur) => {
-      const next = fn(cur);
-      write(next);
-      return next;
-    });
-  }, []);
+  const { items, commit, backup, restoreBackup, dropBackup } = useStoredList<SavedBuild>('library', 'gcbuild.library.v2', isSaved);
 
   /** Save a build; a fresh uid keeps library copies independent of the team slot. */
   const save = useCallback((build: CharBuild, name: string, source: SavedBuild['source'] = 'manual') => {
@@ -56,7 +36,7 @@ export function useLibrary() {
   const remove = useCallback((id: string) => commit((list) => list.filter((x) => x.id !== id)), [commit]);
   const rename = useCallback((id: string, name: string) => commit((list) => list.map((x) => (x.id === id ? { ...x, name } : x))), [commit]);
 
-  return { items, save, remove, removeAll, rename };
+  return { items, save, remove, removeAll, rename, backup, restoreBackup, dropBackup };
 }
 
 export type Library = ReturnType<typeof useLibrary>;

@@ -5,13 +5,14 @@ import { charIcon } from '../data/icons';
 import { attackHitCount, framesUntil, frameSlice } from '../lib/frames';
 import { act, uid } from '../lib/project';
 import {
-  childLists, cloneWithIds, condToScript, getList, isAction, listInside, locate, readyCond, removeItem, type ListId,
+  childLists, cloneWithIds, condToScript, getList, isAction, lastChar, listInside, locate, notation, readyCond, removeItem, soleChar, type ListId,
 } from '../lib/rotation';
 import type { Updater } from '../lib/store';
 import { actionLabel, cooldowns, readinessAt, type TimelineResult } from '../lib/timeline';
 import type { ActionType, CharBuild, CharData, Condition, Project, RotationAction, RotItem, Section } from '../lib/types';
 import { Icon } from './Combobox';
 import { ConditionEditor, newClause } from './ConditionEditor';
+import { NotationBox } from './NotationBox';
 
 export interface Cursor {
   listId: ListId;
@@ -267,6 +268,7 @@ export function RotationBuilder(props: Props) {
       </div>
 
       <div className="sequence">
+        <NotationBox project={project} update={update} cursor={cursor} setCursor={setCursor} setSelected={setSelected} />
         {(['opener', 'loop'] as Section[]).map((s) => {
           const list = project.rotation[s];
           return (
@@ -377,6 +379,18 @@ export function RotationBuilder(props: Props) {
               <button
                 type="button"
                 className="btn ghost small"
+                onClick={() => update((p) => {
+                  const x = locate(p.rotation, sel.id)?.item;
+                  if (x && !isAction(x) && x.kind !== 'raw') x.collapsed = !x.collapsed;
+                })}
+              >
+                {sel.collapsed ? 'Expand' : 'Collapse'}
+              </button>
+            )}
+            {!isAction(sel) && sel.kind !== 'raw' && (
+              <button
+                type="button"
+                className="btn ghost small"
                 title="Replace the block with its contents"
                 onClick={() => {
                   update((p) => {
@@ -442,11 +456,18 @@ function ItemList({ items, listId, ctx, empty }: { items: RotItem[]; listId: Lis
       {isTarget && cursor.afterId === null && <Caret />}
       {items.map((x, idx) => {
         const prev = items[idx - 1];
-        const prevChar = prev && isAction(prev) ? prev.char : '';
+        const prevChar = prev ? lastChar(prev) : '';
+        const collapsed = !isAction(x) && x.kind !== 'raw' && !!x.collapsed;
         return (
-          <span key={x.id} className={`item-wrap ${isAction(x) ? '' : 'is-block'}`}>
+          <span key={x.id} className={`item-wrap ${isAction(x) || collapsed ? '' : 'is-block'}`}>
             {dropHint?.listId === listId && dropHint.index === idx && <span className="drop-marker" />}
-            {isAction(x) ? <ActionChip a={x} prevChar={prevChar} listId={listId} idx={idx} ctx={ctx} /> : <BlockView b={x} listId={listId} idx={idx} ctx={ctx} />}
+            {isAction(x) ? (
+              <ActionChip a={x} prevChar={prevChar} listId={listId} idx={idx} ctx={ctx} />
+            ) : collapsed ? (
+              <BlockChip b={x} prevChar={prevChar} listId={listId} idx={idx} ctx={ctx} />
+            ) : (
+              <BlockView b={x} listId={listId} idx={idx} ctx={ctx} />
+            )}
             {isTarget && cursor.afterId === x.id && <Caret />}
           </span>
         );
@@ -529,10 +550,84 @@ function ActionChip({ a, prevChar, listId, idx, ctx }: { a: RotationAction; prev
   );
 }
 
+function toggleCollapse(ctx: Ctx, id: string, listId: ListId) {
+  let nowCollapsed = false;
+  ctx.update((p) => {
+    const x = locate(p.rotation, id)?.item;
+    if (x && !isAction(x) && x.kind !== 'raw') {
+      x.collapsed = !x.collapsed;
+      nowCollapsed = x.collapsed;
+    }
+  });
+  // don't leave the insertion cursor inside a block that gets hidden
+  if (nowCollapsed && listInside(ctx.project.rotation, ctx.cursor.listId, id)) ctx.setCursor({ listId, afterId: id });
+}
+
+/** A collapsed repeat / if block, drawn like an action chip: "10(N2CD)". */
+function BlockChip({ b, prevChar, listId, idx, ctx }: { b: Exclude<RotItem, RotationAction>; prevChar: string; listId: ListId; idx: number; ctx: Ctx }) {
+  const items = b.kind === 'if' ? [...b.then, ...b.else] : b.kind === 'repeat' ? b.body : [];
+  const key = soleChar(items);
+  const c = key ? getChar(key) : undefined;
+  const color = c ? ELEMENT_COLORS[c.element] : 'var(--accent)';
+  // the chip shows the character once; drop the key prefix the notation adds for single-character blocks
+  const text = notation([b], !key) || (b.kind === 'repeat' ? `${b.count}()` : '[]?');
+  return (
+    <span
+      className={`chip block-chip ${ctx.selected === b.id ? 'sel' : ''} ${c && key !== prevChar ? 'new-char' : ''}`}
+      style={{ ['--el' as string]: color }}
+      {...dragProps(b.id, listId, idx, ctx)}
+      onClick={(e) => {
+        e.stopPropagation();
+        ctx.setSelected(ctx.selected === b.id ? null : b.id);
+        ctx.setCursor({ listId, afterId: b.id });
+      }}
+      onDoubleClick={(e) => {
+        e.stopPropagation();
+        toggleCollapse(ctx, b.id, listId);
+      }}
+      title={`${b.kind === 'if' ? `if ${condToScript(b.cond)}\n` : ''}double-click to expand`}
+    >
+      <button
+        type="button"
+        className="blk-toggle chip-expand"
+        title="Expand"
+        onClick={(e) => {
+          e.stopPropagation();
+          toggleCollapse(ctx, b.id, listId);
+        }}
+      >
+        ▸
+      </button>
+      {c && key !== prevChar && (
+        <>
+          <Icon src={charIcon(c.id)} size={20} className="avatar chip-avatar" />
+          <span className="chip-char">{c.name.split(' ')[0]}</span>
+        </>
+      )}
+      <span className="chip-act">{text}</span>
+      <button
+        type="button"
+        className="chip-x"
+        title="Remove block"
+        onClick={(e) => {
+          e.stopPropagation();
+          ctx.update((p) => { removeItem(p.rotation, b.id); });
+          if (ctx.selected === b.id) ctx.setSelected(null);
+        }}
+      >
+        ×
+      </button>
+    </span>
+  );
+}
+
 function BlockView({ b, listId, idx, ctx }: { b: Exclude<RotItem, RotationAction>; listId: ListId; idx: number; ctx: Ctx }) {
   const selected = ctx.selected === b.id;
+  const collapsed = b.kind !== 'raw' && !!b.collapsed;
+  const summary = b.kind === 'raw' ? '' : notation([b]);
+  const toggle = () => toggleCollapse(ctx, b.id, listId);
   return (
-    <div className={`blk blk-${b.kind} ${selected ? 'sel' : ''}`} onClick={(e) => e.stopPropagation()}>
+    <div className={`blk blk-${b.kind} ${selected ? 'sel' : ''} ${collapsed ? 'collapsed' : ''}`} onClick={(e) => e.stopPropagation()}>
       <div
         className="blk-head"
         {...dragProps(b.id, listId, idx, ctx, true)}
@@ -541,9 +636,27 @@ function BlockView({ b, listId, idx, ctx }: { b: Exclude<RotItem, RotationAction
           ctx.setSelected(selected ? null : b.id);
           ctx.setCursor({ listId, afterId: b.id });
         }}
+        onDoubleClick={(e) => {
+          e.stopPropagation();
+          toggle();
+        }}
       >
+        {b.kind !== 'raw' && (
+          <button
+            type="button"
+            className="blk-toggle"
+            title={collapsed ? 'Expand (double-click the header works too)' : 'Collapse'}
+            onClick={(e) => {
+              e.stopPropagation();
+              toggle();
+            }}
+          >
+            {collapsed ? '▸' : '▾'}
+          </button>
+        )}
         {b.kind === 'if' && (<><span className="blk-kw">if</span><code className="blk-cond">{condToScript(b.cond)}</code></>)}
         {b.kind === 'repeat' && (<><span className="blk-kw">repeat</span><b>{b.count}×</b></>)}
+        {summary && b.kind !== 'raw' && <code className="blk-notation muted">{summary}</code>}
         {b.kind === 'raw' && (<><span className="blk-kw">script</span><span className="muted small">raw gcsim script (the estimate skips it)</span></>)}
         <button
           type="button"

@@ -7,8 +7,9 @@ dist/
 # gcsim CLI (downloaded by setup.bat / the app)
 tools/
 
-# your saved teams (remove this line if you want them in the repo)
+# your saved teams, artifacts and builds (remove a line to keep it in the repo)
 teams/
+userdata/
 
 # local / editor / OS files
 *.local

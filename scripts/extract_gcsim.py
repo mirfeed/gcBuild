@@ -480,6 +480,8 @@ def main():
         char_dm = json.load(f)["data"]
     with open(os.path.join(data_dir, "weapon.dm.json"), encoding="utf8") as f:
         weapon_dm = json.load(f)["data"]
+    with open(os.path.join(data_dir, "artifact.dm.json"), encoding="utf8") as f:
+        artifact_dm = json.load(f)["data"]
     with open(os.path.join(gc, "ui", "packages", "localization", "src", "locales", "names.dm.json"), encoding="utf8") as f:
         names = json.load(f)["English"]
 
@@ -533,6 +535,10 @@ def main():
             "weapon": WEAPON_CLASS.get(dm["weapon_class"], "sword"),
             "rarity": 5 if dm["rarity"] == "QUALITY_ORANGE" else 4,
             "energy": dm.get("skill_details", {}).get("burst_energy_cost", 0),
+            # game ids, used to read Enka.Network data (travelers share an id, the depot tells them apart)
+            "gameId": dm.get("id", 0),
+            "depot": dm.get("sub_id", 0),
+            "skillIds": {k: dm.get("skill_details", {}).get(k, 0) for k in ("attack", "skill", "burst")},
             "aliases": sorted(set(aliases)),
             "base": cat["base"],
             "asc": cat["asc"],
@@ -557,6 +563,7 @@ def main():
         params, _ = ability_params(cfg)
         weapons.append({
             "key": key,
+            "gameId": dm.get("id", 0),
             "name": names["weapon_names"].get(key, key),
             "type": cat["type"],
             "rarity": cat["rarity"],
@@ -573,6 +580,7 @@ def main():
         params, _ = ability_params(cfg)
         sets.append({
             "key": key,
+            "textMapId": str(artifact_dm.get(key, {}).get("text_map_id", "")),
             "name": names["artifact_names"].get(key, key),
             "params": params.get("default", {}),
             "aliases": set_alias.get(key, [key]),

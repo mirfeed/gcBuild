@@ -3,6 +3,7 @@ import { ELEMENT_COLORS, getChar } from '../data';
 import { charIcon } from '../data/icons';
 import { Icon } from './Combobox';
 import type { TimelineResult, TLBar, TLStep } from '../lib/timeline';
+import { useTimelineNav } from '../lib/useTimelineNav';
 import type { Project } from '../lib/types';
 
 interface Props {
@@ -54,6 +55,7 @@ export function Timeline({ project, timeline, selected, onSelect, loops, setLoop
   const [hover, setHover] = useState<{ x: number; frame: number } | null>(null);
   const [showCd, setShowCd] = useState(true);
   const scroller = useRef<HTMLDivElement>(null);
+  const fit = useTimelineNav(scroller, pxPerSec, setPx, 5, 300);
 
   const team = project.team.filter((b) => b && getChar(b.key));
   const lanes = useMemo<Lane[]>(() => {
@@ -111,8 +113,10 @@ export function Timeline({ project, timeline, selected, onSelect, loops, setLoop
       <div className="tl-controls">
         <label className="field inline">
           <span>Zoom</span>
-          <input type="range" min={15} max={200} value={pxPerSec} onChange={(e) => setPx(+e.target.value)} />
+          <input type="range" min={5} max={300} value={pxPerSec} onChange={(e) => setPx(+e.target.value)} />
         </label>
+        <button type="button" className="btn ghost small" onClick={() => fit(endFrame / 60 + 1)} title="Fit the whole timeline in view">Fit</button>
+        <span className="muted small">drag to pan · Ctrl+wheel to zoom</span>
         <label className="field inline">
           <span>Loops shown</span>
           <select value={loops} onChange={(e) => setLoops(+e.target.value)}>

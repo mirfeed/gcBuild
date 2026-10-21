@@ -6,7 +6,8 @@
  * Main stat values come from gcsim's table (rarity / level), substats are taken
  * as rolled; percent stats are converted to gcsim's fractions.
  */
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
+import { useStoredList } from './persist';
 import { artifactMain, characters, sets } from '../data';
 import { SLOTS, type Artifact, type CharBuild, type Slot, type Stat } from './types';
 
@@ -105,7 +106,7 @@ export function gearSets(gear: CharBuild['gear']): CharBuild['sets'] {
   const tally = new Map<string, number>();
   for (const slot of SLOTS) {
     const a = gear?.[slot];
-    if (a) tally.set(a.set, (tally.get(a.set) ?? 0) + 1);
+    if (a?.set) tally.set(a.set, (tally.get(a.set) ?? 0) + 1);
   }
   return [...tally].filter(([, n]) => n >= 2).map(([key, n]) => ({ key, count: n >= 4 ? 4 : 2 }));
 }
@@ -126,33 +127,13 @@ export function subValue(a: Artifact, stat: Stat): number {
 
 // ------------------------------------------------------------------ inventory store
 
-const KEY = 'gcbuild.artifacts.v1';
+const isArtifact = (a: Artifact) => !!a && typeof a.id === 'string' && SLOTS.includes(a.slot);
 
-function read(): Artifact[] {
-  try {
-    const raw = localStorage.getItem(KEY);
-    const list = raw ? (JSON.parse(raw) as Artifact[]) : [];
-    return Array.isArray(list) ? list : [];
-  } catch {
-    return [];
-  }
-}
-
+/** Inventory saved to userdata/artifacts.json (with a browser cache). */
 export function useInventory() {
-  const [items, setItems] = useState<Artifact[]>(read);
-  const [error, setError] = useState<string | null>(null);
-
-  const replace = useCallback((list: Artifact[]) => {
-    setItems(list);
-    try {
-      localStorage.setItem(KEY, JSON.stringify(list));
-      setError(null);
-    } catch {
-      setError('Browser storage is full: the inventory works for this session but will not be remembered.');
-    }
-  }, []);
-
-  return { items, replace, clear: () => replace([]), error };
+  const { items, commit, error, backup, restoreBackup, dropBackup } = useStoredList<Artifact>('artifacts', 'gcbuild.artifacts.v1', isArtifact);
+  const replace = useCallback((list: Artifact[]) => commit(() => list), [commit]);
+  return { items, replace, clear: () => replace([]), error, backup, restoreBackup, dropBackup };
 }
 
 export type Inventory = ReturnType<typeof useInventory>;

@@ -5,7 +5,7 @@ import { critValue, parseGoodArtifacts, subValue, type Inventory } from '../lib/
 import { SLOTS, type Artifact, type Slot, type Stat } from '../lib/types';
 import { Icon } from './Combobox';
 
-const SHORT: Record<string, string> = {
+export const SHORT: Record<string, string> = {
   hp: 'HP', 'hp%': 'HP%', atk: 'ATK', 'atk%': 'ATK%', def: 'DEF', 'def%': 'DEF%', em: 'EM', er: 'ER', cr: 'CR', cd: 'CD',
   heal: 'Heal', 'pyro%': 'Pyro', 'hydro%': 'Hydro', 'anemo%': 'Anemo', 'electro%': 'Electro', 'dendro%': 'Dendro',
   'cryo%': 'Cryo', 'geo%': 'Geo', 'phys%': 'Phys',
@@ -26,7 +26,7 @@ export function ArtifactCard({ a, badge, onClick, selected }: { a: Artifact; bad
   const set = setByKey.get(a.set);
   const loc = a.location ? getChar(a.location)?.name ?? a.location : '';
   return (
-    <button type="button" className={`art-card r${a.rarity} ${selected ? 'sel' : ''}`} onClick={onClick} disabled={!onClick} title={set?.name}>
+    <button type="button" className={`art-card r${a.rarity} ${selected ? 'sel' : ''}`} onClick={onClick} disabled={!onClick} title={set?.name ?? 'set not implemented in gcsim (no set bonus)'}>
       <span className="art-top">
         <Icon src={setIcon(a.set)} size={34} />
         <span className="art-main">
@@ -67,11 +67,11 @@ export function ArtifactBrowser({ items, slot, selectedId, usedBy, onPick }: Bro
   const [limit, setLimit] = useState(60);
 
   const pool = useMemo(() => items.filter((a) => !slotF || a.slot === slotF), [items, slotF]);
-  const setsHere = useMemo(() => [...new Set(pool.map((a) => a.set))].sort((x, y) => (setByKey.get(x)?.name ?? x).localeCompare(setByKey.get(y)?.name ?? y)), [pool]);
+  const setsHere = useMemo(() => [...new Set(pool.map((a) => a.set || '-'))].sort((x, y) => (setByKey.get(x)?.name ?? x).localeCompare(setByKey.get(y)?.name ?? y)), [pool]);
   const mainsHere = useMemo(() => [...new Set(pool.map((a) => a.main))], [pool]);
 
   const list = useMemo(() => {
-    const f = pool.filter((a) => (!setF || a.set === setF) && (!mainF || a.main === mainF));
+    const f = pool.filter((a) => (!setF || (a.set || '-') === setF) && (!mainF || a.main === mainF));
     const score = (a: Artifact) => (sort === 'cv' ? critValue(a) : sort === 'level' ? a.level * 10 + a.rarity : subValue(a, sort) * (FLAT.has(sort) ? 1 : 100));
     return f.sort((a, b) => score(b) - score(a) || critValue(b) - critValue(a));
   }, [pool, setF, mainF, sort]);
@@ -89,7 +89,7 @@ export function ArtifactBrowser({ items, slot, selectedId, usedBy, onPick }: Bro
         )}
         <select value={setF} onChange={(e) => setSetF(e.target.value)}>
           <option value="">all sets ({setsHere.length})</option>
-          {setsHere.map((s) => <option key={s} value={s}>{setByKey.get(s)?.name ?? s}</option>)}
+          {setsHere.map((s) => <option key={s} value={s}>{setByKey.get(s)?.name ?? (s === '-' ? 'other (not in gcsim)' : s)}</option>)}
         </select>
         <select value={mainF} onChange={(e) => setMainF(e.target.value)}>
           <option value="">any main stat</option>
@@ -210,6 +210,17 @@ export function ArtifactsPanel({ inventory, usedBy, onClose }: { inventory: Inve
         <div className="lib-paste">
           <textarea className="import-text" spellCheck={false} placeholder='{"format":"GOOD","version":2,"artifacts":[…]}' value={text} onChange={(e) => setText(e.target.value)} />
           <button type="button" className="btn primary small" disabled={!text.trim()} onClick={() => doImport(text)}>Import</button>
+        </div>
+      )}
+      {inventory.backup.length > 0 && (
+        <div className="hint warn small lib-result">
+          <div>This browser had a different artifact list ({inventory.backup.length} artifacts) than the userdata folder ({inventory.items.length}).</div>
+          <span className="row tight">
+            <button type="button" className="btn primary small" onClick={() => confirm(`Replace the current ${inventory.items.length} artifacts with the ${inventory.backup.length} from the browser backup?`) && inventory.restoreBackup()}>
+              Restore {inventory.backup.length} from browser backup
+            </button>
+            <button type="button" className="btn ghost small" onClick={inventory.dropBackup}>Dismiss</button>
+          </span>
         </div>
       )}
       {(msg || inventory.error) && (

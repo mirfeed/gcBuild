@@ -7,10 +7,10 @@ import {
   SUB_ORDER, SUB_VALUES, TOTAL_LIQUID,
 } from '../lib/kqms';
 import { createBuild, defaultRefine } from '../lib/project';
-import { critValue, gearSets } from '../lib/artifacts';
+import { gearSets } from '../lib/artifacts';
 import type { SavedBuild } from '../lib/library';
 import { SLOTS, type Artifact, type CharBuild, type ScalingStat, type Slot, type Stat, type SubStat } from '../lib/types';
-import { ArtifactPicker, fmtStat, SLOT_LABEL } from './Artifacts';
+import { ArtifactPicker, fmtStat, SHORT, SLOT_LABEL } from './Artifacts';
 import { Combobox, Icon, type ComboOption } from './Combobox';
 
 const ELEMENT_ORDER = ['pyro', 'hydro', 'anemo', 'electro', 'dendro', 'cryo', 'geo'];
@@ -130,7 +130,9 @@ export function CharCard({ slot, build, taken, isActive, onChange, onSetActive, 
               </span>
               <span className="char-title">
                 <strong>{char.name}</strong>
-                <span className="muted small">{char.rarity}★ {char.element} · {char.weapon} · {char.energy}⚡</span>
+                <span className="muted small">
+                  {char.rarity}★ {char.element} · {char.weapon} · <span title="Energy needed for the burst (Q)">Q {char.energy} energy</span>
+                </span>
               </span>
             </span>
           )}
@@ -294,7 +296,11 @@ export function CharCard({ slot, build, taken, isActive, onChange, onSetActive, 
                       <>
                         <Icon src={setIcon(a.set)} size={30} />
                         <span className="gs-main">{fmtStat(a.main, a.mainValue)}<small>{a.main}</small></span>
-                        <span className="gs-cv">CV {critValue(a)}</span>
+                        <span className="gs-subs">
+                          {a.subs.map((x) => (
+                            <span key={x.stat} className={x.stat === 'cr' || x.stat === 'cd' ? 'crit' : ''}>{SHORT[x.stat]} {fmtStat(x.stat, x.value)}</span>
+                          ))}
+                        </span>
                       </>
                     ) : (
                       <span className="muted">+ {SLOT_LABEL[s]}</span>
