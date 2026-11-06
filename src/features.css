@@ -211,3 +211,11 @@ button.art-card:not(:disabled):hover { border-color: var(--accent); }
 }
 .nb-row textarea:focus { border-color: var(--accent); outline: none; }
 .nb-preview code { color: var(--buff); }
+
+/* ------------------------------------------------------------------ crash screen */
+.crash { max-width: 900px; margin: 40px auto; padding: 24px; }
+.crash h1 { margin: 0 0 12px; }
+.crash pre {
+  margin-top: 16px; padding: 12px; max-height: 50vh; overflow: auto; font-size: 12px;
+  white-space: pre-wrap; background: var(--panel, #1b1f27); border: 1px solid var(--border, #333); border-radius: 6px;
+}

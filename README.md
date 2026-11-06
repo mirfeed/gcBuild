@@ -49,12 +49,24 @@ A local web app for building and running [gcsim](https://gcsim.app) configs with
     curves, every hit coloured by element, element applications and reactions on the enemy, and red hatching
     where gcsim waited because an action wasn't ready.
 
+## Install on a new PC (Windows)
+
+1. Install [Node.js](https://nodejs.org) (LTS). Nothing else is needed (no Python, no Go).
+2. Get the project: `git clone https://github.com/mirfeed/gcBuild.git`, or *Code → Download ZIP* on GitHub
+   and unpack it.
+3. Run `setup.bat` once. It installs the npm packages and downloads the gcsim CLI into `tools/`.
+4. Run `start.bat`. It opens http://localhost:5179/ in the browser.
+
+Artifacts, saved builds (`userdata/`) and teams (`teams/`) are not in git. To move them to another PC, copy
+those two folders into the project folder.
+
 ## Run
 
 ```sh
 npm install
-npm run dev        # http://localhost:5173 (includes the local gcsim bridge)
-npm run preview    # serves the production build, also with the gcsim bridge
+npm run setup:gcsim  # download the gcsim CLI into tools/
+npm run dev          # http://localhost:5179 (includes the local gcsim bridge)
+npm run preview      # serves the production build, also with the gcsim bridge
 ```
 
 The gcsim bridge (`server/gcsim.ts`) runs inside the Vite dev / preview server, so simulating needs one of
