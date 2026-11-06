@@ -15,6 +15,7 @@ import { useInventory } from './lib/artifacts';
 import { generateConfig } from './lib/config';
 import { importConfig } from './lib/importConfig';
 import { generateKqms } from './lib/kqms';
+import { openReport } from './lib/report';
 import { useLibrary } from './lib/library';
 import { act, emptyProject, exampleProject, uid } from './lib/project';
 import { getList, locate, pruneChar, removeItem } from './lib/rotation';
@@ -274,6 +275,14 @@ export default function App() {
           <button type="button" className="btn ghost" onClick={() => { setImportOpen((v) => !v); setImportMsg([]); }}>Import config</button>
           <button type="button" className="btn ghost" onClick={exportJson}>Export</button>
           <button type="button" className="btn ghost" onClick={() => fileInput.current?.click()} title="Open a .gcbuild.json project or a gcsim config .txt">Open</button>
+          <button
+            type="button"
+            className="btn ghost"
+            onClick={() => openReport(`Bug: `, { config })}
+            title="Report a problem on GitHub: opens a new issue with versions and the current config filled in"
+          >
+            Report a bug
+          </button>
           <input
             ref={fileInput}
             type="file"

@@ -15,7 +15,15 @@
           if (!root || root.childElementCount) return;
           var pre = document.createElement('pre');
           pre.style.cssText = 'margin:40px;padding:16px;white-space:pre-wrap;font:13px monospace;color:#f88;background:#1b1f27;border:1px solid #444;border-radius:6px';
-          pre.textContent = 'The builder failed to start:\n\n' + msg + '\n\n' + navigator.userAgent;
+          var text = 'The builder failed to start:\n\n' + msg + '\n\n' + navigator.userAgent;
+          pre.textContent = text + '\n\n';
+          var a = document.createElement('a');
+          a.href = 'https://github.com/mirfeed/gcBuild/issues/new?labels=bug&title=' + encodeURIComponent('Start failure') +
+            '&body=' + encodeURIComponent('**What happened?**\n\n**Error**\n```text\n' + text.slice(0, 3000) + '\n```');
+          a.target = '_blank';
+          a.style.color = '#8cf';
+          a.textContent = 'Report this on GitHub';
+          pre.appendChild(a);
           root.appendChild(pre);
         }
         window.addEventListener('error', function (e) {

@@ -59,8 +59,23 @@ A local web app for building and running [gcsim](https://gcsim.app) configs with
 3. Run `setup.bat` once. It installs the npm packages and downloads the gcsim CLI into `tools/`.
 4. Run `start.bat`. It opens http://localhost:5179/ in the browser.
 
-Artifacts, saved builds (`userdata/`) and teams (`teams/`) are not in git. To move them to another PC, copy
-those two folders into the project folder.
+### Updating and where your data lives
+
+Imported artifacts and *My builds* are stored in `userdata/`, saved teams in `teams/` (inside the project
+folder). Updating doesn't touch them:
+
+- cloned with git: update with `git pull`;
+- downloaded the ZIP: unpack the new version, copy `userdata/` and `teams/` over from the old folder, then run
+  `setup.bat`.
+
+The same two folders are what to copy to move your data to another PC.
+
+## Reporting a bug
+
+*Report a bug* in the header opens a new GitHub issue with the app version, gcsim version, browser and the
+current team's config filled in; add what you clicked and what you expected. If the app crashes, the
+*Something broke* page has *Report on GitHub* (with the error included) and *Copy report* for sending it
+another way. Without a GitHub account, send the *Export* file with a description.
 
 ## Run
 
