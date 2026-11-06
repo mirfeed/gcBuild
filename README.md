@@ -1,5 +1,7 @@
 # gcBuild: gcsim config builder
 
+[Документация на русском](README.ru.md)
+
 A local web app for building and running [gcsim](https://gcsim.app) configs without writing script by hand:
 
 - **KQMS builds in one click.** Pick character, weapon and sets, then press *Generate KQMS*. Substats follow the
