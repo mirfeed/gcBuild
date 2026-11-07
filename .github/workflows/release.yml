@@ -32,6 +32,19 @@ jobs:
 
       - run: npm run typecheck
 
+      # electron-builder uploads the installer, latest.yml and the .blockmap in parallel; with no release yet each
+      # upload creates its own draft. Creating the draft first makes all three land in the same one.
+      - name: Create the draft release
+        shell: bash
+        run: |
+          if gh api "repos/$GITHUB_REPOSITORY/releases" --jq '.[].tag_name' | grep -qx "$GITHUB_REF_NAME"; then
+            echo "release for $GITHUB_REF_NAME already exists"
+          else
+            gh release create "$GITHUB_REF_NAME" --draft --title "${GITHUB_REF_NAME#v}" --notes "" --verify-tag
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build installer and upload to a draft release
         run: npm run release:win
         env:
