@@ -75,6 +75,7 @@ export const RU: Record<string, string> = {
   "Dendro DMG": "Дендро %", "Cryo DMG": "Крио %", "Geo DMG": "Гео %", "Phys DMG": "Физ. %",
   "ATK": "АТК", "HP": "НР", "DEF": "ЗАЩ",
   "Slot {n}": "Слот {n}",
+  "Drag to move this character to another slot": "Перетащите, чтобы переставить персонажа в другой слот",
   "Add character…": "Добавить персонажа…",
   "Energy needed for the burst (Q)": "Энергия, нужная для взрыва стихии (Q)",
   "Q {n} energy": "Q: {n} энергии",
@@ -228,7 +229,7 @@ export const RU: Record<string, string> = {
   "Copy the rotation loop in this notation": "Скопировать цикл ротации в этой записи",
   "Copy loop as text": "Копировать цикл текстом",
   "will add {names} to the team": "добавит в отряд: {names}",
-  "N2 C/CA D J E hE Q A P · 10N2CD or 10(…) repeats · [N1Q | N2C]? if/else · Q? only if ready · wait30": "N2 C/CA D J E hE Q A P · 10N2CD или 10(…) — повтор · [N1Q | N2C]? — если/иначе · Q? — только если готов · wait30",
+  "N2 C/CA D J E hE Q A P · 10N2CD or 10(…) repeats · [N1Q | N2C]? if/else · Q? only if ready · Q?{.hutao.hpratio < 0.5} any condition · wait30": "N2 C/CA D J E hE Q A P · 10N2CD или 10(…) — повтор · [N1Q | N2C]? — если/иначе · Q? — только если готов · Q?{.hutao.hpratio < 0.5} — любое условие · wait30",
 
   // ---------------------------------------------------------------- conditions
   "match": "выполнены",

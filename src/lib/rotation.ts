@@ -121,13 +121,31 @@ const LETTER: Record<string, string> = {
   charge: 'C', dash: 'D', jump: 'J', skill: 'E', burst: 'Q', aim: 'A', high_plunge: 'P', low_plunge: 'LP', walk: 'W', swap: 'S',
 };
 
-function actionNotation(a: RotationAction): string {
+/**
+ * Condition suffix: "?" alone means "if ready" (skill / burst of the action, or of the block's first action);
+ * any other condition is spelled out as gcsim script: "?{.hutao.hpratio < 0.5}". `full: false` drops it (the
+ * block header already shows the condition).
+ */
+function condSuffix(cond: Condition | undefined, implied: Condition | null, full: boolean): string {
+  if (!cond) return '';
+  if (!full) return '';
+  const s = condToScript(cond);
+  return implied && condToScript(implied) === s ? '?' : `?{${s}}`;
+}
+
+const readyOf = (a: RotationAction | undefined): Condition | null =>
+  a && a.char && (a.action === 'skill' || a.action === 'burst') ? readyCond(a.char, a.action) : null;
+
+function actionNotation(a: RotationAction, full = true): string {
   if (a.action === 'wait' || a.action === 'delay') return ` ${a.action}${a.frames ?? 0} `;
-  if (a.action === 'attack') return `N${Math.max(1, a.repeat)}`;
+  if (a.action === 'attack') return `N${Math.max(1, a.repeat)}${condSuffix(a.cond, null, full)}`;
   const letter = a.action === 'skill' && a.params?.hold ? 'hE' : LETTER[a.action] ?? a.action;
   const s = letter.repeat(Math.max(1, a.repeat));
-  return a.cond ? `${s}?` : s;
+  return `${s}${condSuffix(a.cond, readyOf(a), full)}`;
 }
+
+/** "?{…}" contains spaces: such an action must stay one token, outside the letter run */
+const spelledOut = (a: RotationAction, full: boolean) => full && !!a.cond && actionNotation(a, full).includes('?{');
 
 function charsIn(items: RotItem[], out = new Set<string>()): Set<string> {
   walkItems(items, (x) => {
@@ -174,10 +192,13 @@ export interface NotationFormat {
   name?: (key: string) => string;
   /** separator between character parts (default " · ") */
   sep?: string;
+  /** write conditions ("?" / "?{script}"); default true */
+  conds?: boolean;
 }
 
 export function notation(items: RotItem[], showChars = charsIn(items).size > 1, fmt: NotationFormat = {}): string {
   const nameOf = fmt.name ?? ((k: string) => k);
+  const full = fmt.conds ?? true;
   const parts: string[] = [];
   let curChar = '';
   let tokens: string[] = [];
@@ -197,7 +218,10 @@ export function notation(items: RotItem[], showChars = charsIn(items).size > 1, 
         flush();
         curChar = x.char;
       }
-      run += actionNotation(x);
+      if (spelledOut(x, full)) {
+        endRun();
+        tokens.push(actionNotation(x, full));
+      } else run += actionNotation(x, full);
     } else if (x.kind === 'repeat') {
       const chars = [...charsIn(x.body)];
       if (chars.length > 1) {
@@ -222,7 +246,8 @@ export function notation(items: RotItem[], showChars = charsIn(items).size > 1, 
       curChar = same ? before : '';
       const t = notation(x.then, showChars && !same, fmt) || '-';
       const e = notation(x.else, showChars && !same, fmt);
-      const block = `[${t}${e ? ` | ${e}` : ''}]?`;
+      const first = x.then.find(isAction);
+      const block = `[${t}${e ? ` | ${e}` : ''}]${condSuffix(x.cond, readyOf(first), full)}`;
       if (same) parts[parts.length - 1] = `${parts[parts.length - 1] ?? ''} ${block}`.trim();
       else parts.push(block);
     } else {

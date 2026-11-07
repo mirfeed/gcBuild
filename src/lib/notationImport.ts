@@ -6,11 +6,13 @@
  *   N2 C|CA D J E hE Q A P LP   attack:2, charge, dash, jump, skill, hold skill, burst, aim, plunges
  *   X?            the action only runs if ready (skill / burst)
  *   10N2CD | 10(…) repeat; groups may contain spaces and other characters
- *   [then | else]? if block (condition defaults to "burst ready", editable afterwards)
+ *   [then | else]? if block: "?" = the first action's skill / burst is ready (or burst ready)
+ *   X?{expr} / [..]?{expr}  any other condition, as gcsim script: Q?{.hutao.hpratio < 0.5}
  *   wait30 / delay30
  */
 import { characters } from '../data';
 import { uid } from './project';
+import { parseCondition } from './importConfig';
 import { readyCond } from './rotation';
 import type { ActionType, RotationAction, RotItem } from './types';
 
@@ -51,12 +53,29 @@ export function parseNotation(text: string, team: string[]): NotationParse {
     id: uid(), char: action === 'wait' || action === 'delay' ? '' : cur, action, params: {}, repeat: 1, ...extra,
   });
 
+  /** "{…}" right after "?": a gcsim condition (balanced braces / parentheses allowed inside) */
+  const readCond = (): string | null => {
+    if (text[i] !== '{') return null;
+    let depth = 0;
+    const start = i + 1;
+    for (; i < text.length; i++) {
+      if (text[i] === '{') depth++;
+      else if (text[i] === '}' && --depth === 0) {
+        const expr = text.slice(start, i).trim();
+        i++;
+        return expr;
+      }
+    }
+    errors.push('missing "}"');
+    return text.slice(start).trim();
+  };
+
   const skipSep = () => {
     while (i < text.length && SEPARATORS.has(text[i])) i++;
   };
   const readWord = () => {
     const start = i;
-    while (i < text.length && !SEPARATORS.has(text[i]) && !'()[]|'.includes(text[i])) i++;
+    while (i < text.length && !SEPARATORS.has(text[i]) && !'()[]|{}'.includes(text[i])) i++;
     return text.slice(start, i);
   };
 
@@ -136,14 +155,21 @@ export function parseNotation(text: string, team: string[]): NotationParse {
         if (text[i] === ']') i++;
         else errors.push('missing "]"');
         if (text[i] === '?') i++;
+        const expr = readCond();
         const first = then.find((x): x is RotationAction => !('kind' in x) || x.kind === 'action');
-        const cond = first && (first.action === 'skill' || first.action === 'burst')
-          ? readyCond(first.char, first.action)
-          : readyCond(cur || team[0] || 'char', 'burst');
+        const cond = expr
+          ? parseCondition(expr)
+          : first && (first.action === 'skill' || first.action === 'burst')
+            ? readyCond(first.char, first.action)
+            : readyCond(cur || team[0] || 'char', 'burst');
         out.push({ kind: 'if', id: uid(), cond, then, else: els });
         continue;
       }
-      if (ch === '(' || ch === ')' || ch === ']' || ch === '|') {
+      if (ch === '{') {
+        errors.push(`"{${readCond()}}" needs an action or [block] before it`);
+        continue;
+      }
+      if (ch === '(' || ch === ')' || ch === ']' || ch === '|' || ch === '}') {
         errors.push(`unexpected "${ch}"`);
         i++;
         continue;
@@ -178,6 +204,13 @@ export function parseNotation(text: string, team: string[]): NotationParse {
         continue;
       }
       out.push(...parseWord(word));
+      // "Q?{expr}": the condition of the action just read
+      const expr = readCond();
+      if (expr !== null) {
+        const last = out[out.length - 1];
+        if (last && (!('kind' in last) || last.kind === 'action')) (last as RotationAction).cond = parseCondition(expr);
+        else errors.push(`"{${expr}}" needs an action before it`);
+      }
     }
   };
 

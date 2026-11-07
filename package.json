@@ -17,7 +17,8 @@
     "build:electron": "node scripts/build-electron.mjs",
     "app": "vite build && node scripts/build-electron.mjs && node scripts/run-electron.mjs",
     "dist:win": "vite build && node scripts/build-electron.mjs && electron-builder --win --publish never",
-    "release:win": "vite build && node scripts/build-electron.mjs && electron-builder --win --publish always"
+    "release:win": "vite build && node scripts/build-electron.mjs && electron-builder --win --publish always",
+    "notation-check": "tsx scripts/notation-check.ts"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",

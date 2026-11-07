@@ -409,3 +409,15 @@ body:has(.app.fancy) {
 .team-tab.add:hover { color: var(--accent); border-color: var(--accent); }
 .share-warn { margin: -6px 4px 0; }
 .also-in { color: var(--warn); margin: 2px 0 0 4px; }
+
+/* ------------------------------------------------------------------ team: reorder by dragging */
+.slot-wrap { display: flex; min-width: 0; border-radius: var(--radius); }
+.slot-wrap > .card { flex: 1; min-width: 0; }
+.slot-wrap.dragging { opacity: 0.45; }
+.slot-wrap.drop-target { outline: 2px dashed var(--accent); outline-offset: 3px; }
+.drag-handle {
+  flex: none; cursor: grab; color: var(--muted); font-size: 16px; line-height: 1; padding: 6px 2px; margin-left: -4px;
+  border-radius: 4px; user-select: none;
+}
+.drag-handle:hover { color: var(--text); background: var(--card-2); }
+.drag-handle:active { cursor: grabbing; }

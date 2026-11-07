@@ -106,7 +106,7 @@ export function NotationBox({ project, update, cursor, setCursor, setSelected }:
       )}
       {!parsed && !msg && (
         <div className="small muted nb-preview">
-          {t('N2 C/CA D J E hE Q A P · 10N2CD or 10(…) repeats · [N1Q | N2C]? if/else · Q? only if ready · wait30')}
+          {t('N2 C/CA D J E hE Q A P · 10N2CD or 10(…) repeats · [N1Q | N2C]? if/else · Q? only if ready · Q?{.hutao.hpratio < 0.5} any condition · wait30')}
         </div>
       )}
       {msg && <div className="small hint nb-preview">{msg}</div>}

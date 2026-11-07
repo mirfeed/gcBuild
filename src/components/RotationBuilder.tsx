@@ -625,7 +625,8 @@ function BlockChip({ b, prevChar, listId, idx, ctx }: { b: Exclude<RotItem, Rota
 function BlockView({ b, listId, idx, ctx }: { b: Exclude<RotItem, RotationAction>; listId: ListId; idx: number; ctx: Ctx }) {
   const selected = ctx.selected === b.id;
   const collapsed = b.kind !== 'raw' && !!b.collapsed;
-  const summary = b.kind === 'raw' ? '' : notation([b]);
+  // the header shows the condition already: the hint leaves it out
+  const summary = b.kind === 'raw' ? '' : notation([b], undefined, { conds: false });
   const toggle = () => toggleCollapse(ctx, b.id, listId);
   return (
     <div className={`blk blk-${b.kind} ${selected ? 'sel' : ''} ${collapsed ? 'collapsed' : ''}`} onClick={(e) => e.stopPropagation()}>

@@ -43,6 +43,9 @@ export default function App() {
   const [selected, setSelected] = useState<string | null>(null);
   const [cursor, setCursor] = useState<Cursor>(() => endOf(project, 'loop'));
   const [focusChar, setFocusChar] = useState(0);
+  // reordering the team by dragging a card's handle onto another slot
+  const [dragFrom, setDragFrom] = useState<number | null>(null);
+  const [dropAt, setDropAt] = useState<number | null>(null);
   const [loops, setLoops] = useState(2);
   const [waitFrames, setWaitFrames] = useState(30);
   const [teamOpen, setTeamOpen] = useState(true);
@@ -186,6 +189,16 @@ export default function App() {
       }
       if (!p.active && b) p.active = b.key;
     });
+  };
+
+  /** Move the character in slot `from` to slot `to`; the others shift (the rotation follows characters, not slots). */
+  const moveMember = (from: number, to: number) => {
+    if (from === to) return;
+    update((p) => {
+      const [m] = p.team.splice(from, 1);
+      p.team.splice(to, 0, m);
+    });
+    setFocusChar(to);
   };
 
   /** Put a library build into the team: the same character's slot, the given slot, or the first free one. */
@@ -501,8 +514,23 @@ export default function App() {
         {teamOpen && (
           <div className="team-grid">
             {project.team.map((b, i) => (
-              <CharCard
+              <div
                 key={b?.uid ?? `empty-${i}`}
+                className={`slot-wrap ${dragFrom === i ? 'dragging' : ''} ${dragFrom !== null && dropAt === i && dragFrom !== i ? 'drop-target' : ''}`}
+                onDragOver={(e) => {
+                  if (dragFrom === null) return;
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = 'move';
+                  if (dropAt !== i) setDropAt(i);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  if (dragFrom !== null) moveMember(dragFrom, i);
+                  setDragFrom(null);
+                  setDropAt(null);
+                }}
+              >
+              <CharCard
                 slot={i}
                 build={b}
                 taken={taken}
@@ -515,7 +543,21 @@ export default function App() {
                 inventory={inventory.items}
                 usedBy={usedBy}
                 alsoIn={b ? sharing.alsoIn.get(b.key) : undefined}
+                drag={b ? {
+                  onDragStart: (e) => {
+                    setDragFrom(i);
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', String(i));
+                    const card = e.currentTarget.closest('.char-card');
+                    if (card) e.dataTransfer.setDragImage(card, 40, 30);
+                  },
+                  onDragEnd: () => {
+                    setDragFrom(null);
+                    setDropAt(null);
+                  },
+                } : undefined}
               />
+              </div>
             ))}
           </div>
         )}

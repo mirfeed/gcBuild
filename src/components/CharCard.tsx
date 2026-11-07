@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type DragEvent } from 'react';
 import { ELEMENT_COLORS, characters, getChar, sets, weaponByKey, weapons } from '../data';
 import { CHAR_META } from '../data/curated';
 import { charIcon, setIcon, weaponIcon } from '../data/icons';
@@ -63,6 +63,8 @@ interface Props {
   usedBy: Map<string, string>;
   /** other teams of the group with this character */
   alsoIn?: string[];
+  /** drag handle to reorder the team (left out for empty slots) */
+  drag?: { onDragStart: (e: DragEvent<HTMLElement>) => void; onDragEnd: () => void };
 }
 
 function StatSelect({ value, options, onChange, disabled }: { value: Stat; options: Stat[]; onChange: (s: Stat) => void; disabled?: boolean }) {
@@ -75,7 +77,7 @@ function StatSelect({ value, options, onChange, disabled }: { value: Stat; optio
   );
 }
 
-export function CharCard({ slot, build, taken, isActive, onChange, onSetActive, onKqms, saved, onSave, inventory, usedBy, alsoIn }: Props) {
+export function CharCard({ slot, build, taken, isActive, onChange, onSetActive, onKqms, saved, onSave, inventory, usedBy, alsoIn, drag }: Props) {
   const char = build ? getChar(build.key) : undefined;
   const weapon = build ? weaponByKey.get(build.weapon.key) : undefined;
   const color = char ? ELEMENT_COLORS[char.element] : 'var(--border)';
@@ -124,6 +126,18 @@ export function CharCard({ slot, build, taken, isActive, onChange, onSetActive, 
   return (
     <div className={`card char-card ${isActive ? 'is-active' : ''}`} style={{ ['--el' as string]: color, ['--art' as string]: `url("${charIcon(char.id)}")` }}>
       <div className="char-head">
+        {drag && (
+          <span
+            className="drag-handle"
+            draggable
+            onDragStart={drag.onDragStart}
+            onDragEnd={drag.onDragEnd}
+            title={t('Drag to move this character to another slot')}
+            aria-label={t('Drag to move this character to another slot')}
+          >
+            ⠿
+          </span>
+        )}
         <Combobox
           className="char-pick"
           value={build.key}
