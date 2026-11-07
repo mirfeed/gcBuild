@@ -337,3 +337,42 @@ body:has(.app.fancy) {
 }
 .update-banner.ready { background: color-mix(in srgb, var(--ok) 14%, var(--panel)); border-color: color-mix(in srgb, var(--ok) 45%, transparent); }
 .update-banner.warn { background: color-mix(in srgb, var(--warn) 12%, var(--panel)); border-color: color-mix(in srgb, var(--warn) 40%, transparent); }
+
+/* ------------------------------------------------------------------ desktop app: custom title bar */
+:root { --titlebar-h: 34px; --titlebar: #0b0e13; --titlebar-fg: #c9d1e0; }
+@media (prefers-color-scheme: light) { :root:not([data-theme='dark']) { --titlebar: #e6e9f0; --titlebar-fg: #1b2333; } }
+:root[data-theme='light'] { --titlebar: #e6e9f0; --titlebar-fg: #1b2333; }
+.titlebar {
+  position: fixed; inset: 0 0 auto 0; height: var(--titlebar-h); z-index: 300;
+  display: flex; align-items: center; gap: 2px; padding-left: 8px;
+  /* leave room for the window controls Windows draws on the right */
+  padding-right: calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw));
+  background: var(--titlebar); color: var(--titlebar-fg); user-select: none;
+  -webkit-app-region: drag; app-region: drag;
+}
+.titlebar button { -webkit-app-region: no-drag; app-region: no-drag; }
+.tb-btn {
+  width: 30px; height: 26px; border: 0; border-radius: 6px; background: transparent; color: var(--muted);
+  display: inline-grid; place-items: center; font-size: 16px; line-height: 1;
+}
+.tb-btn:hover:not(:disabled) { background: color-mix(in srgb, var(--titlebar-fg) 10%, transparent); color: var(--titlebar-fg); }
+.tb-btn:disabled { opacity: 0.35; }
+.tb-btn.on { color: var(--accent); }
+.tb-title {
+  position: absolute; left: 50%; transform: translateX(-50%); max-width: 50vw;
+  display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; pointer-events: none;
+}
+.tb-title span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tb-logo {
+  width: 20px; height: 20px; border-radius: 6px; display: grid; place-items: center; font-size: 12px; flex: none;
+  background: linear-gradient(150deg, #34467a, #141a26); color: #e2eaff;
+}
+.tb-right { margin-left: auto; display: flex; align-items: center; gap: 2px; padding-right: 6px; }
+.app.desktop { padding-top: calc(var(--titlebar-h) + 12px); }
+.app.desktop .modal-back { top: var(--titlebar-h); }
+/* the title bar already shows the logo: the header keeps just the editable project name */
+.app.desktop .brand { display: none; }
+.app.desktop .project-name { margin-left: -10px; }
+
+/* theme switch */
+.theme-switch button { padding: 3px 7px; font-size: 13px; }

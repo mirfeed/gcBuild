@@ -11,6 +11,8 @@ export type UpdateStatus =
 export interface DesktopBridge {
   isDesktop: true;
   version: () => Promise<string>;
+  /** window controls / native widgets follow the app theme */
+  setTheme?: (theme: 'system' | 'dark' | 'light') => Promise<void>;
   /** pick an old gcBuild folder and copy its userdata/, teams/ and gcsim into the app's data folder */
   importOld: () => Promise<string>;
   openDataFolder: () => Promise<string>;

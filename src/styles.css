@@ -23,8 +23,9 @@
   line-height: 1.4;
 }
 
+/* light palette: the OS theme unless the user picked one (data-theme on <html>, see src/lib/ui.ts) */
 @media (prefers-color-scheme: light) {
-  :root {
+  :root:not([data-theme='dark']) {
     color-scheme: light;
     --bg: #f3f5f9;
     --panel: #ffffff;
@@ -38,6 +39,20 @@
     --cd: #a3adc2;
   }
 }
+:root[data-theme='light'] {
+    color-scheme: light;
+    --bg: #f3f5f9;
+    --panel: #ffffff;
+    --card: #f7f9fc;
+    --card-2: #eef2f8;
+    --border: #d6dce8;
+    --text: #1b2333;
+    --muted: #64708a;
+    --accent: #3d6be0;
+    --accent-2: #2f59c7;
+    --cd: #a3adc2;
+}
+:root[data-theme='dark'] { color-scheme: dark; }
 
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--text); }

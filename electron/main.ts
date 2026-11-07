@@ -9,7 +9,7 @@
  * Data (userdata/, teams/, tools/gcsim.exe) lives in %APPDATA%\gcBuild, not next to the program, so updates
  * and reinstalls keep it. gcsim itself is downloaded on demand (AGPL: not bundled).
  */
-import { app, BrowserWindow, dialog, ipcMain, protocol, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, nativeTheme, protocol, shell } from 'electron';
 import { randomBytes } from 'node:crypto';
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
@@ -104,15 +104,27 @@ function loadState(): WinState {
 
 let win: BrowserWindow | null = null;
 
+/** Height of the custom title bar; must match --titlebar-h in features.css. */
+const TITLEBAR_H = 34;
+/** Window controls (minimize / maximize / close) drawn by Windows over our own title bar, in the app's colours. */
+const overlay = () => (nativeTheme.shouldUseDarkColors
+  ? { color: '#0b0e13', symbolColor: '#c9d1e0', height: TITLEBAR_H }
+  : { color: '#e6e9f0', symbolColor: '#1b2333', height: TITLEBAR_H });
+
 function createWindow() {
   const st = loadState();
   win = new BrowserWindow({
     x: st.x, y: st.y, width: st.width, height: st.height, minWidth: 900, minHeight: 600,
-    title: 'gcBuild', backgroundColor: '#0f1218', autoHideMenuBar: true, show: false,
+    title: 'gcBuild', backgroundColor: nativeTheme.shouldUseDarkColors ? '#0f1218' : '#f3f5f9', autoHideMenuBar: true, show: false,
+    // no system title bar: the page draws its own (see TitleBar.tsx), Windows keeps snap layouts
+    titleBarStyle: 'hidden', titleBarOverlay: overlay(),
     icon: path.join(__dirname, '..', 'build', 'icon.png'),
     webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true },
   });
   if (st.maximized) win.maximize();
+  const onTheme = () => win?.setTitleBarOverlay(overlay());
+  nativeTheme.on('updated', onTheme);
+  win.on('closed', () => nativeTheme.off('updated', onTheme));
   win.once('ready-to-show', () => win?.show());
   // window size / position: saved shortly after every move / resize (and on close), restored on start
   let saveTimer: NodeJS.Timeout | undefined;
@@ -217,6 +229,28 @@ ipcMain.handle('import-old', () => importOldFolder());
 ipcMain.handle('open-data', () => shell.openPath(dataRoot()));
 ipcMain.handle('app-version', () => app.getVersion());
 
+// theme picked in the app: drives prefers-color-scheme, native widgets and the window controls overlay
+const themeFile = () => path.join(dataRoot(), 'theme.json');
+function loadTheme() {
+  try {
+    const th = JSON.parse(fs.readFileSync(themeFile(), 'utf8')).theme;
+    if (th === 'dark' || th === 'light' || th === 'system') nativeTheme.themeSource = th;
+  } catch {
+    // first start: follow the OS
+  }
+}
+ipcMain.handle('set-theme', (_e, th: unknown) => {
+  if (th !== 'dark' && th !== 'light' && th !== 'system') return;
+  nativeTheme.themeSource = th;
+  win?.setTitleBarOverlay(overlay());
+  try {
+    fs.mkdirSync(dataRoot(), { recursive: true });
+    fs.writeFileSync(themeFile(), JSON.stringify({ theme: th }));
+  } catch {
+    // not worth failing over
+  }
+});
+
 // ------------------------------------------------------------------ lifecycle
 
 app.on('second-instance', () => {
@@ -226,6 +260,7 @@ app.on('second-instance', () => {
 });
 
 app.whenReady().then(async () => {
+  loadTheme();
   const port = await startServer();
   protocol.handle(SCHEME, (request) => {
     const u = new URL(request.url);

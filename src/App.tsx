@@ -20,6 +20,7 @@ import { generateKqms } from './lib/kqms';
 import { openReport } from './lib/report';
 import { desktop } from './lib/desktop';
 import { checkForUpdatesNow, UpdateBanner, useUpdateStatus } from './components/UpdateBanner';
+import { TitleBar } from './components/TitleBar';
 import { useLibrary } from './lib/library';
 import { act, emptyProject, exampleProject, uid } from './lib/project';
 import { getList, locate, pruneChar, removeItem } from './lib/rotation';
@@ -27,7 +28,7 @@ import { parseSample, type SampleTimeline } from './lib/sample';
 import { useProject } from './lib/store';
 import { simulate } from './lib/timeline';
 import { SLOTS, type CharBuild, type Project } from './lib/types';
-import { setAdvanced, setBackgrounds, useAdvanced, useBackgrounds } from './lib/ui';
+import { setAdvanced, setBackgrounds, setTheme, useAdvanced, useBackgrounds, useTheme, type Theme } from './lib/ui';
 import { LANGS, setLang, t, useLang } from './i18n';
 
 interface SimState {
@@ -58,6 +59,7 @@ export default function App() {
   const fileInput = useRef<HTMLInputElement>(null);
   const advanced = useAdvanced();
   const backgrounds = useBackgrounds();
+  const theme = useTheme();
   const update$ = useUpdateStatus();
   const [helpOpen, setHelpOpen] = useState(() => !helpSeen());
   useEffect(() => {
@@ -259,7 +261,18 @@ export default function App() {
   };
 
   return (
-    <div className={`app ${advanced ? 'advanced' : 'simple'} ${backgrounds ? 'fancy' : 'plain'}`}>
+    <div className={`app ${advanced ? 'advanced' : 'simple'} ${backgrounds ? 'fancy' : 'plain'} ${desktop ? 'desktop' : ''}`}>
+      {desktop && (
+        <TitleBar
+          title={project.name}
+          onUndo={undo}
+          onRedo={redo}
+          canUndo={canUndo}
+          canRedo={canRedo}
+          helpOpen={helpOpen}
+          onHelp={() => setHelpOpen((v) => !v)}
+        />
+      )}
       <header className="app-head">
         <div className="brand">
           <span className="logo">⚔</span>
@@ -267,9 +280,13 @@ export default function App() {
         </div>
         <input className="project-name" value={project.name} onChange={(e) => update((p) => { p.name = e.target.value; })} aria-label={t('Project name')} />
         <div className="head-actions">
-          <button type="button" className="icon-btn" onClick={undo} disabled={!canUndo} title={t('Undo (Ctrl+Z)')}>↶</button>
-          <button type="button" className="icon-btn" onClick={redo} disabled={!canRedo} title={t('Redo (Ctrl+Y)')}>↷</button>
-          <span className="head-sep" />
+          {!desktop && (
+            <>
+              <button type="button" className="icon-btn" onClick={undo} disabled={!canUndo} title={t('Undo (Ctrl+Z)')}>↶</button>
+              <button type="button" className="icon-btn" onClick={redo} disabled={!canRedo} title={t('Redo (Ctrl+Y)')}>↷</button>
+              <span className="head-sep" />
+            </>
+          )}
           <button type="button" className={`btn ghost ${teamsOpen ? 'on' : ''}`} onClick={() => setTeamsOpen((v) => !v)} title={t("Save / load teams in the project's teams/ folder")}>
             {t('Teams')}
           </button>
@@ -302,8 +319,15 @@ export default function App() {
               { label: t('Report a bug'), onClick: () => openReport('Bug: ', { config }), title: t('Report a problem on GitHub: opens a new issue with versions and the current config filled in') },
             ]}
           />
-          <button type="button" className={`btn ghost help-btn ${helpOpen ? 'on' : ''}`} onClick={() => setHelpOpen((v) => !v)} title={t('How to use')}>?</button>
+          {!desktop && (
+            <button type="button" className={`btn ghost help-btn ${helpOpen ? 'on' : ''}`} onClick={() => setHelpOpen((v) => !v)} title={t('How to use')}>?</button>
+          )}
           <span className="head-sep" />
+          <span className="seg theme-switch" role="group" aria-label={t('Theme')}>
+            {([['system', '◐', t('Theme: like the system')], ['dark', '☾', t('Theme: dark')], ['light', '☀', t('Theme: light')]] as [Theme, string, string][]).map(([id, icon, label]) => (
+              <button key={id} type="button" className={theme === id ? 'on' : ''} onClick={() => setTheme(id)} title={label} aria-label={label}>{icon}</button>
+            ))}
+          </span>
           <span className="seg lang-switch" title={t('Language')}>
             {LANGS.map((l) => (
               <button key={l.id} type="button" className={lang === l.id ? 'on' : ''} onClick={() => setLang(l.id)}>{l.label}</button>

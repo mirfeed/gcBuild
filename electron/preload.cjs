@@ -4,6 +4,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('gcbuild', {
   isDesktop: true,
   version: () => ipcRenderer.invoke('app-version'),
+  setTheme: (theme) => ipcRenderer.invoke('set-theme', theme),
   importOld: () => ipcRenderer.invoke('import-old'),
   openDataFolder: () => ipcRenderer.invoke('open-data'),
   updateStatus: () => ipcRenderer.invoke('update-status'),

@@ -4,6 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>gcsim Config Builder</title>
+    <script>
+      // saved theme before the first paint (no light/dark flash); 'system' = follow the OS
+      try {
+        var th = localStorage.getItem('gcbuild.theme');
+        if (th === 'light' || th === 'dark') document.documentElement.dataset.theme = th;
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>
