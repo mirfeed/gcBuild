@@ -168,7 +168,9 @@ export default function App() {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement;
       if (['INPUT', 'SELECT', 'TEXTAREA'].includes(t.tagName) || t.isContentEditable) return;
-      const k = e.key.toLowerCase();
+      // letters and digits by physical key, so shortcuts work on any layout (on Russian, E types "у")
+      const k = /^Key[A-Z]$/.test(e.code) ? e.code.slice(3).toLowerCase() : e.key.toLowerCase();
+      const digit = /^(?:Digit|Numpad)([1-4])$/.exec(e.code)?.[1] ?? (/^[1-4]$/.test(e.key) ? e.key : null);
       if ((e.ctrlKey || e.metaKey) && k === 'z') {
         e.preventDefault();
         if (e.shiftKey) redo();
@@ -182,8 +184,8 @@ export default function App() {
       }
       if (e.ctrlKey || e.metaKey || e.altKey) return;
 
-      if (/^[1-4]$/.test(e.key)) {
-        if (project.team[+e.key - 1]) setFocusChar(+e.key - 1);
+      if (digit) {
+        if (project.team[+digit - 1]) setFocusChar(+digit - 1);
         return;
       }
       const list = getList(project.rotation, cursor.listId) ?? [];

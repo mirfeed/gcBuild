@@ -20,15 +20,16 @@ export interface SimResult {
     dps: Stat4;
     total_damage: Stat4;
     warnings: Record<string, boolean>;
-    failed_actions: Record<string, Stat4>[];
-    character_dps: Stat4[];
-    source_dps: { sources: Record<string, Stat4> }[];
+    // per-character entries can be {} (e.g. a team member with no actions in the rotation)
+    failed_actions: (Record<string, Stat4> | null)[];
+    character_dps: (Stat4 | undefined)[];
+    source_dps: { sources?: Record<string, Stat4> }[];
     source_reactions: { sources?: Record<string, Stat4> }[];
-    total_source_energy: { sources: Record<string, Stat4> }[];
-    end_stats: { ending_energy: Stat4 }[];
-    field_time: Stat4[];
-    character_actions?: { sources: Record<string, Stat4> }[];
-    target_aura_uptime?: { sources: Record<string, Stat4> }[];
+    total_source_energy: { sources?: Record<string, Stat4> }[];
+    end_stats: { ending_energy?: Stat4 }[];
+    field_time: (Stat4 | undefined)[];
+    character_actions?: { sources?: Record<string, Stat4> }[];
+    target_aura_uptime?: { sources?: Record<string, Stat4> }[];
   };
 }
 

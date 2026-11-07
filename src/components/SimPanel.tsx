@@ -164,7 +164,7 @@ export function SimPanel({ project, update, config, result, resultConfig, onResu
                     <td>{result.statistics.field_time[i]?.mean.toFixed(1)}s</td>
                     <td>
                       {(() => {
-                        const q = result.statistics.character_actions?.[i]?.sources.burst;
+                        const q = result.statistics.character_actions?.[i]?.sources?.burst;
                         if (!q) return <span className="muted">0</span>;
                         return <>{q.mean.toFixed(2)} <span className="muted">({q.min}-{q.max})</span></>;
                       })()}
@@ -172,7 +172,7 @@ export function SimPanel({ project, update, config, result, resultConfig, onResu
                     <td className={fails.length ? 'warn' : 'muted'}>
                       {fails.length ? fails.map(([k, v]) => `${v.mean.toFixed(2)}s ${FAIL_LABEL[k] ? t(FAIL_LABEL[k]) : k}`).join(', ') : '-'}
                     </td>
-                    <td>{result.statistics.end_stats[i]?.ending_energy.mean.toFixed(0)}</td>
+                    <td>{result.statistics.end_stats[i]?.ending_energy?.mean.toFixed(0) ?? <span className="muted">-</span>}</td>
                     <td>{rx.length ? rx.map(([k, v]) => `${k} ×${v.mean.toFixed(0)}`).join(', ') : <span className="muted">-</span>}</td>
                   </tr>
                 );
