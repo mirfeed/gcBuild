@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { t } from '../i18n';
 
 export interface ComboOption {
   value: string;
@@ -117,7 +118,7 @@ export function Combobox({ value, options, onChange, placeholder, className, var
           <span className="combo-value">
             {selected?.icon && <Icon src={selected.icon} rarity={selected.rarity} />}
             {!selected?.icon && selected?.color && <span className="dot" style={{ background: selected.color }} />}
-            <span className="combo-text">{selected?.label ?? <span className="muted">{placeholder ?? 'Select…'}</span>}</span>
+            <span className="combo-text">{selected?.label ?? <span className="muted">{placeholder ?? t('Select…')}</span>}</span>
           </span>
         )}
         <span className="caret">▾</span>
@@ -128,7 +129,7 @@ export function Combobox({ value, options, onChange, placeholder, className, var
             ref={input}
             className="combo-search"
             value={query}
-            placeholder="Search…"
+            placeholder={t('Search…')}
             onChange={(e) => {
               setQuery(e.target.value);
               setHi(0);
@@ -186,7 +187,7 @@ export function Combobox({ value, options, onChange, placeholder, className, var
                 </div>
               </div>
             ))}
-            {!filtered.length && <div className="combo-empty">No matches</div>}
+            {!filtered.length && <div className="combo-empty">{t('No matches')}</div>}
           </div>
         </div>
       )}

@@ -6,6 +6,7 @@ import { getList, notation } from '../lib/rotation';
 import type { Updater } from '../lib/store';
 import type { Project, RotItem } from '../lib/types';
 import type { Cursor } from './RotationBuilder';
+import { t } from '../i18n';
 
 interface Props {
   project: Project;
@@ -33,7 +34,7 @@ export function NotationBox({ project, update, cursor, setCursor, setSelected }:
   const freeSlots = project.team.filter((b) => !b).length;
   const problems = [
     ...(parsed?.errors ?? []),
-    ...(missing.length > freeSlots ? [`not enough free team slots for ${missing.map((k) => getChar(k)?.name ?? k).join(', ')}`] : []),
+    ...(missing.length > freeSlots ? [t('not enough free team slots for {names}', { names: missing.map((k) => getChar(k)?.name ?? k).join(', ') })] : []),
   ];
   const ok = !!parsed && parsed.items.length > 0 && problems.length === 0;
 
@@ -57,18 +58,18 @@ export function NotationBox({ project, update, cursor, setCursor, setSelected }:
     const last = items[items.length - 1];
     setSelected(null);
     setCursor(mode === 'cursor' ? { listId: cursor.listId, afterId: last.id } : { listId: mode, afterId: last.id });
-    setMsg(`Added ${items.length} item(s)${missing.length ? `; new team members: ${missing.map((k) => getChar(k)?.name ?? k).join(', ')}` : ''}.`);
+    setMsg(`${t('Added {n} item(s)', { n: items.length })}${missing.length ? `; ${t('new team members: {names}', { names: missing.map((k) => getChar(k)?.name ?? k).join(', ') })}` : ''}.`);
     setText('');
   };
 
   const copyLoop = async () => {
-    const t = rotationText(project.rotation.loop);
+    const txt = rotationText(project.rotation.loop);
     try {
-      await navigator.clipboard.writeText(t);
-      setMsg(`Copied: ${t}`);
+      await navigator.clipboard.writeText(txt);
+      setMsg(t('Copied: {text}', { text: txt }));
     } catch {
-      setText(t);
-      setMsg('Clipboard unavailable: the text is in the box above.');
+      setText(txt);
+      setMsg(t('Clipboard unavailable: the text is in the box above.'));
     }
   };
 
@@ -79,7 +80,7 @@ export function NotationBox({ project, update, cursor, setCursor, setSelected }:
           rows={1}
           spellCheck={false}
           value={text}
-          placeholder="Type rotation: Nicole QE Citlali E Yelan Q N1 E N1 E N1 HuTao E 10N2CD Q"
+          placeholder={t('Type rotation: {example}', { example: 'Nicole QE Citlali E Yelan Q N1 E N1 E N1 HuTao E 10N2CD Q' })}
           onChange={(e) => {
             setText(e.target.value);
             setMsg(null);
@@ -91,21 +92,21 @@ export function NotationBox({ project, update, cursor, setCursor, setSelected }:
             }
           }}
         />
-        <button type="button" className="btn primary small" disabled={!ok} onClick={() => apply('loop')} title="Enter">Replace loop</button>
-        <button type="button" className="btn ghost small" disabled={!ok} onClick={() => apply('opener')}>Replace opener</button>
-        <button type="button" className="btn ghost small" disabled={!ok} onClick={() => apply('cursor')}>Insert at cursor</button>
-        <button type="button" className="btn ghost small" disabled={!project.rotation.loop.length} onClick={copyLoop} title="Copy the rotation loop in this notation">Copy loop as text</button>
+        <button type="button" className="btn primary small" disabled={!ok} onClick={() => apply('loop')} title="Enter">{t('Replace loop')}</button>
+        <button type="button" className="btn ghost small" disabled={!ok} onClick={() => apply('opener')}>{t('Replace opener')}</button>
+        <button type="button" className="btn ghost small" disabled={!ok} onClick={() => apply('cursor')}>{t('Insert at cursor')}</button>
+        <button type="button" className="btn ghost small" disabled={!project.rotation.loop.length} onClick={copyLoop} title={t('Copy the rotation loop in this notation')}>{t('Copy loop as text')}</button>
       </div>
       {parsed && (
         <div className="small nb-preview">
           {parsed.items.length > 0 && <span>→ <code>{rotationText(parsed.items)}</code></span>}
-          {missing.length > 0 && missing.length <= freeSlots && <span className="muted"> · will add {missing.map((k) => getChar(k)?.name ?? k).join(', ')} to the team</span>}
+          {missing.length > 0 && missing.length <= freeSlots && <span className="muted"> · {t('will add {names} to the team', { names: missing.map((k) => getChar(k)?.name ?? k).join(', ') })}</span>}
           {problems.map((p) => <div key={p} className="warn">{p}</div>)}
         </div>
       )}
       {!parsed && !msg && (
         <div className="small muted nb-preview">
-          N2 C/CA D J E hE Q A P · 10N2CD or 10(…) repeats · [N1Q | N2C]? if/else · Q? only if ready · wait30
+          {t('N2 C/CA D J E hE Q A P · 10N2CD or 10(…) repeats · [N1Q | N2C]? if/else · Q? only if ready · wait30')}
         </div>
       )}
       {msg && <div className="small hint nb-preview">{msg}</div>}

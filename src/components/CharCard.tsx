@@ -12,20 +12,24 @@ import type { SavedBuild } from '../lib/library';
 import { SLOTS, type Artifact, type CharBuild, type ScalingStat, type Slot, type Stat, type SubStat } from '../lib/types';
 import { ArtifactPicker, fmtStat, SHORT, SLOT_LABEL } from './Artifacts';
 import { Combobox, Icon, type ComboOption } from './Combobox';
+import { t } from '../i18n';
 
 const ELEMENT_ORDER = ['pyro', 'hydro', 'anemo', 'electro', 'dendro', 'cryo', 'geo'];
 
-const charOptions: ComboOption[] = [...characters]
+const elName = (e: string) => t(e[0].toUpperCase() + e.slice(1));
+
+/** Character picker options (built per render so element / weapon names follow the language). */
+const charOptions = (): ComboOption[] => [...characters]
   .sort((a, b) => ELEMENT_ORDER.indexOf(a.element) - ELEMENT_ORDER.indexOf(b.element) || a.name.localeCompare(b.name))
   .map((c) => ({
     value: c.key,
     label: c.name,
-    hint: `${c.rarity}★ ${c.weapon}`,
+    hint: `${c.rarity}★ ${t(c.weapon)}`,
     color: ELEMENT_COLORS[c.element],
-    group: c.element[0].toUpperCase() + c.element.slice(1),
+    group: elName(c.element),
     icon: charIcon(c.id),
     rarity: c.rarity,
-    search: `${c.element} ${c.weapon} ${c.aliases.join(' ')}`,
+    search: `${c.element} ${c.weapon} ${elName(c.element)} ${t(c.weapon)} ${c.aliases.join(' ')}`,
   }));
 
 const setOptions: ComboOption[] = sets.map((s) => ({ value: s.key, label: s.name, icon: setIcon(s.key), search: s.aliases.join(' ') }));
@@ -41,6 +45,7 @@ const CUSTOM_STAT_ORDER: Stat[] = [
   'pyro%', 'hydro%', 'anemo%', 'electro%', 'dendro%', 'cryo%', 'geo%', 'phys%',
 ];
 const FLAT: Stat[] = ['hp', 'atk', 'def', 'em'];
+const statLabel = (s: Stat) => t(STAT_LABEL[s] ?? s);
 
 interface Props {
   slot: number;
@@ -62,7 +67,7 @@ function StatSelect({ value, options, onChange, disabled }: { value: Stat; optio
   return (
     <select value={value} onChange={(e) => onChange(e.target.value as Stat)} disabled={disabled}>
       {options.map((s) => (
-        <option key={s} value={s}>{STAT_LABEL[s] ?? s}</option>
+        <option key={s} value={s}>{statLabel(s)}</option>
       ))}
     </select>
   );
@@ -84,13 +89,13 @@ export function CharCard({ slot, build, taken, isActive, onChange, onSetActive, 
     [char],
   );
 
-  const options = useMemo(() => charOptions.filter((o) => o.value === build?.key || !taken.includes(o.value)), [taken, build?.key]);
+  const options = useMemo(() => charOptions().filter((o) => o.value === build?.key || !taken.includes(o.value)), [taken, build?.key]);
 
   if (!build || !char) {
     return (
       <div className="card char-card empty">
-        <div className="slot-label">Slot {slot + 1}</div>
-        <Combobox value="" options={options} variant="grid" placeholder="Add character…" onChange={(k) => onChange(createBuild(k))} />
+        <div className="slot-label">{t('Slot {n}', { n: slot + 1 })}</div>
+        <Combobox value="" options={options} variant="grid" placeholder={t('Add character…')} onChange={(k) => onChange(createBuild(k))} />
       </div>
     );
   }
@@ -115,7 +120,7 @@ export function CharCard({ slot, build, taken, isActive, onChange, onSetActive, 
   const setPieces = build.sets.reduce((n, s) => n + s.count, 0);
 
   return (
-    <div className={`card char-card ${isActive ? 'is-active' : ''}`} style={{ ['--el' as string]: color }}>
+    <div className={`card char-card ${isActive ? 'is-active' : ''}`} style={{ ['--el' as string]: color, ['--art' as string]: `url("${charIcon(char.id)}")` }}>
       <div className="char-head">
         <Combobox
           className="char-pick"
@@ -131,17 +136,17 @@ export function CharCard({ slot, build, taken, isActive, onChange, onSetActive, 
               <span className="char-title">
                 <strong>{char.name}</strong>
                 <span className="muted small">
-                  {char.rarity}★ {char.element} · {char.weapon} · <span title="Energy needed for the burst (Q)">Q {char.energy} energy</span>
+                  {char.rarity}★ <span className="adv">{elName(char.element)} · </span>{t(char.weapon)}<span className="adv"> · </span><span className="adv" title={t('Energy needed for the burst (Q)')}>{t('Q {n} energy', { n: char.energy })}</span>
                 </span>
               </span>
             </span>
           )}
         />
-        <button type="button" className={`icon-btn ${isActive ? 'on' : ''}`} title="Starting active character" onClick={onSetActive}>
+        <button type="button" className={`icon-btn ${isActive ? 'on' : ''}`} title={t('Starting active character')} onClick={onSetActive}>
           {isActive ? '★' : '☆'}
         </button>
-        <button type="button" className="icon-btn" title="Save to My builds" onClick={onSave}>💾</button>
-        <button type="button" className="icon-btn" title="Remove" onClick={() => onChange(null)}>✕</button>
+        <button type="button" className="icon-btn" title={t('Save to My builds')} onClick={onSave}>💾</button>
+        <button type="button" className="icon-btn" title={t('Remove')} onClick={() => onChange(null)}>✕</button>
       </div>
       {saved.length > 0 && (
         <select
@@ -152,7 +157,7 @@ export function CharCard({ slot, build, taken, isActive, onChange, onSetActive, 
             if (s) onChange({ ...structuredClone(s.build), uid: build.uid });
           }}
         >
-          <option value="">📂 Load a saved build ({saved.length})…</option>
+          <option value="">{t('📂 Load a saved build ({n})…', { n: saved.length })}</option>
           {saved.map((s) => (
             <option key={s.id} value={s.id}>
               {s.name} · {weaponByKey.get(s.build.weapon.key)?.name ?? s.build.weapon.key} R{s.build.weapon.refine} · {new Date(s.savedAt).toLocaleDateString()}
@@ -160,21 +165,21 @@ export function CharCard({ slot, build, taken, isActive, onChange, onSetActive, 
           ))}
         </select>
       )}
-      <div className="gcsim-key muted small">gcsim key: <code>{build.key}</code>{meta?.effects ? '' : ' · timing data from gcsim statuses'}</div>
+      <div className="gcsim-key muted small adv">{t('gcsim key:')} <code>{build.key}</code>{meta?.effects ? '' : ` · ${t('timing data from gcsim statuses')}`}</div>
 
       <div className="row">
-        <label className="field narrow">
-          <span>Lvl</span>
+        <label className="field narrow adv">
+          <span>{t('Lvl')}</span>
           <input value={build.level} onChange={(e) => set((b) => { b.level = e.target.value; })} />
         </label>
         <label className="field narrow">
-          <span>Cons</span>
+          <span>{t('Cons')}</span>
           <select value={build.cons} onChange={(e) => set((b) => { b.cons = +e.target.value; })}>
             {[0, 1, 2, 3, 4, 5, 6].map((c) => <option key={c} value={c}>C{c}</option>)}
           </select>
         </label>
         <label className="field">
-          <span>Talents</span>
+          <span>{t('Talents')}</span>
           <span className="talents">
             {build.talents.map((tv, i) => (
               <input
@@ -192,7 +197,7 @@ export function CharCard({ slot, build, taken, isActive, onChange, onSetActive, 
 
       <div className="row">
         <label className="field grow">
-          <span>Weapon</span>
+          <span>{t('Weapon')}</span>
           <Combobox
             value={build.weapon.key}
             options={weaponOptions}
@@ -201,14 +206,14 @@ export function CharCard({ slot, build, taken, isActive, onChange, onSetActive, 
           />
         </label>
         <label className="field narrow">
-          <span>Ref</span>
+          <span>{t('Ref')}</span>
           <select value={build.weapon.refine} onChange={(e) => set((b) => { b.weapon.refine = +e.target.value; })}>
             {[1, 2, 3, 4, 5].map((r) => <option key={r} value={r}>R{r}</option>)}
           </select>
         </label>
       </div>
       {weapon && Object.keys(weapon.params).length > 0 && (
-        <div className="row params">
+        <div className="row params adv">
           {Object.entries(weapon.params).map(([k, desc]) => (
             <label key={k} className="field narrow" title={desc}>
               <span>{k}</span>
@@ -228,20 +233,20 @@ export function CharCard({ slot, build, taken, isActive, onChange, onSetActive, 
 
       {arts ? (
         <div className="sets small">
-          <span className="muted">Sets (from artifacts): </span>
+          <span className="muted">{t('Sets (from artifacts):')} </span>
           {gearSets(build.gear).length
-            ? gearSets(build.gear).map((s) => <span key={s.key} className="gear-item"><Icon src={setIcon(s.key)} size={18} />{sets.find((x) => x.key === s.key)?.name} {s.count}pc</span>)
-            : <span className="muted">none</span>}
+            ? gearSets(build.gear).map((s) => <span key={s.key} className="gear-item"><Icon src={setIcon(s.key)} size={18} />{sets.find((x) => x.key === s.key)?.name} {t('{n}pc', { n: s.count })}</span>)
+            : <span className="muted">{t('none')}</span>}
         </div>
       ) : (
       <div className="sets">
         {build.sets.map((s, i) => (
           <div key={i} className="row tight set-row">
             <Combobox className="grow" value={s.key} options={setOptions} variant="grid" onChange={(k) => set((b) => { b.sets[i].key = k; })} />
-            <select value={s.count} title="pieces" onChange={(e) => set((b) => { b.sets[i].count = +e.target.value; })}>
-              {[1, 2, 3, 4, 5].map((c) => <option key={c} value={c}>{c}pc</option>)}
+            <select value={s.count} title={t('pieces')} onChange={(e) => set((b) => { b.sets[i].count = +e.target.value; })}>
+              {[1, 2, 3, 4, 5].map((c) => <option key={c} value={c}>{t('{n}pc', { n: c })}</option>)}
             </select>
-            <button type="button" className="icon-btn" title="Remove set" onClick={() => set((b) => { b.sets.splice(i, 1); })}>✕</button>
+            <button type="button" className="icon-btn" title={t('Remove set')} onClick={() => set((b) => { b.sets.splice(i, 1); })}>✕</button>
           </div>
         ))}
         <div className="row tight">
@@ -254,9 +259,9 @@ export function CharCard({ slot, build, taken, isActive, onChange, onSetActive, 
               b.sets.push({ key: 'gladiatorsfinale', count: 2 });
             })}
           >
-            + set
+            {t('+ set')}
           </button>
-          {setPieces > 5 && <span className="warn small">more than 5 pieces</span>}
+          {setPieces > 5 && <span className="warn small">{t('more than 5 pieces')}</span>}
         </div>
       </div>
       )}
@@ -268,19 +273,19 @@ export function CharCard({ slot, build, taken, isActive, onChange, onSetActive, 
               KQMS
             </button>
             <button type="button" className={arts ? 'on' : ''} onClick={() => arts || set((b) => { b.statsMode = 'artifacts'; b.gear = b.gear ?? {}; })}>
-              Artifacts
+              {t('Artifacts')}
             </button>
             <button type="button" className={custom ? 'on' : ''} onClick={() => custom || set((b) => {
               // freeze the current KQMS artifact stats as editable numbers
               b.statsMode = 'custom';
               b.customStats = customFromKqms(build);
             })}>
-              Custom stats
+              {t('Custom stats')}
             </button>
           </span>
           {mode === 'kqms' && (
-            <button type="button" className="btn primary small" onClick={onKqms} title="Allocate 20 fixed + 20 liquid substats (KQM standards)">
-              Generate KQMS
+            <button type="button" className="btn primary small" onClick={onKqms} title={t('Allocate 20 fixed + 20 liquid substats (KQM standards)')}>
+              {t('Generate KQMS')}
             </button>
           )}
         </div>
@@ -291,7 +296,7 @@ export function CharCard({ slot, build, taken, isActive, onChange, onSetActive, 
               {SLOTS.map((s) => {
                 const a = build.gear?.[s];
                 return (
-                  <button key={s} type="button" className={`gear-slot ${a ? 'filled' : ''}`} onClick={() => setPicking(s)} title={a ? `${SLOT_LABEL[s]}: click to change` : `Pick a ${s}`}>
+                  <button key={s} type="button" className={`gear-slot ${a ? 'filled' : ''}`} onClick={() => setPicking(s)} title={a ? t('{slot}: click to change', { slot: t(SLOT_LABEL[s]) }) : t('Pick: {slot}', { slot: t(SLOT_LABEL[s]) })}>
                     {a ? (
                       <>
                         <Icon src={setIcon(a.set)} size={30} />
@@ -303,13 +308,13 @@ export function CharCard({ slot, build, taken, isActive, onChange, onSetActive, 
                         </span>
                       </>
                     ) : (
-                      <span className="muted">+ {SLOT_LABEL[s]}</span>
+                      <span className="muted">+ {t(SLOT_LABEL[s])}</span>
                     )}
                   </button>
                 );
               })}
             </div>
-            {!inventory.length && <div className="hint small">No artifacts imported yet: open <b>Artifacts</b> in the header and import a GOOD export.</div>}
+            {!inventory.length && <div className="hint small">{t('No artifacts imported yet: open Artifacts in the header and import a GOOD export.')}</div>}
             {picking && (
               <ArtifactPicker
                 slot={picking}
@@ -327,7 +332,7 @@ export function CharCard({ slot, build, taken, isActive, onChange, onSetActive, 
             <div className="custom-stats">
               {CUSTOM_STAT_ORDER.filter((s) => (build.customStats ?? {})[s] !== undefined).map((s) => (
                 <label key={s} className="field cstat">
-                  <span>{STAT_LABEL[s]}</span>
+                  <span>{statLabel(s)}</span>
                   <span className="row tight">
                     <input
                       type="number"
@@ -335,24 +340,24 @@ export function CharCard({ slot, build, taken, isActive, onChange, onSetActive, 
                       value={build.customStats?.[s] ?? 0}
                       onChange={(e) => set((b) => { b.customStats = { ...b.customStats, [s]: +e.target.value }; })}
                     />
-                    <button type="button" className="icon-btn" title="Remove" onClick={() => set((b) => { const c = { ...b.customStats }; delete c[s]; b.customStats = c; })}>✕</button>
+                    <button type="button" className="icon-btn" title={t('Remove')} onClick={() => set((b) => { const c = { ...b.customStats }; delete c[s]; b.customStats = c; })}>✕</button>
                   </span>
                 </label>
               ))}
             </div>
             <div className="row tight">
               <select value={addStat} onChange={(e) => setAddStat(e.target.value as Stat)}>
-                {CUSTOM_STAT_ORDER.filter((s) => (build.customStats ?? {})[s] === undefined).map((s) => <option key={s} value={s}>{STAT_LABEL[s]}</option>)}
+                {CUSTOM_STAT_ORDER.filter((s) => (build.customStats ?? {})[s] === undefined).map((s) => <option key={s} value={s}>{statLabel(s)}</option>)}
               </select>
-              <button type="button" className="btn ghost small" onClick={() => set((b) => { b.customStats = { ...b.customStats, [addStat]: 0 }; })}>+ stat</button>
-              <span className="muted small">percent stats as fractions (0.466 = 46.6%)</span>
+              <button type="button" className="btn ghost small" onClick={() => set((b) => { b.customStats = { ...b.customStats, [addStat]: 0 }; })}>{t('+ stat')}</button>
+              <span className="muted small">{t('percent stats as fractions (0.466 = 46.6%)')}</span>
             </div>
           </>
         ) : (
           <>
             <div className="row">
-              <label className="field narrow">
-                <span>Scales on</span>
+              <label className="field narrow adv">
+                <span>{t('Scales on')}</span>
                 <select value={build.profile.stat} onChange={(e) => set((b) => { b.profile.stat = e.target.value as ScalingStat; })}>
                   <option value="atk">ATK</option>
                   <option value="hp">HP</option>
@@ -360,14 +365,14 @@ export function CharCard({ slot, build, taken, isActive, onChange, onSetActive, 
                   <option value="em">EM</option>
                 </select>
               </label>
-              <label className="check" title="Include crit in the damage proxy">
-                <input type="checkbox" checked={build.profile.crit} onChange={(e) => set((b) => { b.profile.crit = e.target.checked; })} /> Crit
+              <label className="check adv" title={t('Include crit in the damage proxy')}>
+                <input type="checkbox" checked={build.profile.crit} onChange={(e) => set((b) => { b.profile.crit = e.target.checked; })} /> {t('Crit')}
               </label>
-              <label className="check" title="Vaporize / melt: value EM through the amplifying multiplier">
-                <input type="checkbox" checked={build.profile.amp} onChange={(e) => set((b) => { b.profile.amp = e.target.checked; })} /> Vape/Melt
+              <label className="check adv" title={t('Vaporize / melt: value EM through the amplifying multiplier')}>
+                <input type="checkbox" checked={build.profile.amp} onChange={(e) => set((b) => { b.profile.amp = e.target.checked; })} /> {t('Vape/Melt')}
               </label>
-              <label className="field narrow" title="Total Energy Recharge to reach before other substats">
-                <span>ER target %</span>
+              <label className="field narrow" title={t('Total Energy Recharge to reach before other substats')}>
+                <span>{t('ER target %')}</span>
                 <input
                   type="number"
                   step={5}
@@ -378,28 +383,28 @@ export function CharCard({ slot, build, taken, isActive, onChange, onSetActive, 
             </div>
             <div className="row">
               <label className="field">
-                <span>Sands</span>
+                <span>{t('Sands')}</span>
                 <StatSelect value={build.main.sands} options={SANDS_STATS} disabled={build.autoMain} onChange={(s) => set((b) => { b.main.sands = s; })} />
               </label>
               <label className="field">
-                <span>Goblet</span>
+                <span>{t('Goblet')}</span>
                 <StatSelect value={build.main.goblet} options={GOBLET_STATS} disabled={build.autoMain} onChange={(s) => set((b) => { b.main.goblet = s; })} />
               </label>
               <label className="field">
-                <span>Circlet</span>
+                <span>{t('Circlet')}</span>
                 <StatSelect value={build.main.circlet} options={CIRCLET_STATS} disabled={build.autoMain} onChange={(s) => set((b) => { b.main.circlet = s; })} />
               </label>
-              <label className="check" title="Let KQMS pick sands / goblet / circlet">
-                <input type="checkbox" checked={build.autoMain} onChange={(e) => set((b) => { b.autoMain = e.target.checked; })} /> auto
+              <label className="check" title={t('Let KQMS pick sands / goblet / circlet')}>
+                <input type="checkbox" checked={build.autoMain} onChange={(e) => set((b) => { b.autoMain = e.target.checked; })} /> {t('auto')}
               </label>
             </div>
 
-            <div className="liquid">
+            <div className="liquid adv">
               {SUB_ORDER.map((s) => {
                 const n = build.liquid[s] ?? 0;
                 const cap = liquidCap(build, s);
                 return (
-                  <span key={s} className={`roll ${n ? 'has' : ''}`} title={`${STAT_LABEL[s]}: 2 fixed + ${n} liquid (cap ${cap})`}>
+                  <span key={s} className={`roll ${n ? 'has' : ''}`} title={t('{stat}: 2 fixed + {n} liquid (cap {cap})', { stat: statLabel(s), n, cap })}>
                     <button type="button" disabled={n <= 0} onClick={() => set((b) => { b.liquid[s as SubStat] = n - 1; b.subsFrom = 'manual'; })}>−</button>
                     <span>{s} <b>{n}</b></span>
                     <button
@@ -411,7 +416,7 @@ export function CharCard({ slot, build, taken, isActive, onChange, onSetActive, 
                 );
               })}
             </div>
-            {build.subsFrom === 'gcsim' && <div className="hint small">Substats from gcsim's optimizer.</div>}
+            {build.subsFrom === 'gcsim' && <div className="hint small">{t("Substats from gcsim's optimizer.")}</div>}
           </>
         )}
 
@@ -422,10 +427,10 @@ export function CharCard({ slot, build, taken, isActive, onChange, onSetActive, 
           <span>EM <b>{Math.round(summary.em)}</b></span>
           <span className={erShort ? 'warn' : ''}>ER <b>{(summary.er * 100).toFixed(1)}%</b></span>
           <span>CR/CD <b>{(summary.cr * 100).toFixed(1)}/{(summary.cd * 100).toFixed(1)}</b></span>
-          {mode === 'kqms' && <span className={summary.liquidUsed !== TOTAL_LIQUID ? 'warn' : 'muted'}>liquid {summary.liquidUsed}/{TOTAL_LIQUID}</span>}
+          {mode === 'kqms' && <span className={`adv ${summary.liquidUsed !== TOTAL_LIQUID ? 'warn' : 'muted'}`}>{t('liquid')} {summary.liquidUsed}/{TOTAL_LIQUID}</span>}
         </div>
-        {stale && <div className="hint small">Substats differ from the KQMS allocation for these inputs. Click Generate KQMS to reallocate.</div>}
-        {erShort && !stale && <div className="hint warn small">ER target not reachable with KQMS liquid caps.</div>}
+        {stale && <div className="hint small">{t('Substats differ from the KQMS allocation for these inputs. Click Generate KQMS to reallocate.')}</div>}
+        {erShort && !stale && <div className="hint warn small">{t('ER target not reachable with KQMS liquid caps.')}</div>}
       </div>
     </div>
   );

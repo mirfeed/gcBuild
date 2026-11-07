@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { generateConfig } from '../lib/config';
 import type { Project } from '../lib/types';
+import { t } from '../i18n';
 
 interface TeamFile {
   name: string;
@@ -26,66 +27,66 @@ export function TeamsPanel({ project, onLoad, onClose }: { project: Project; onL
   const refresh = () =>
     call<{ dir: string; teams: TeamFile[] }>('list').then(
       (r) => { setTeams(r.teams); setDir(r.dir); },
-      (e) => setMsg(`Could not read the teams folder: ${(e as Error).message}. Run the app with npm run dev.`),
+      (e) => setMsg(t('Could not read the teams folder: {error}. Run the app with start.bat.', { error: (e as Error).message })),
     );
 
   useEffect(() => { refresh(); }, []);
 
   const save = async () => {
     const n = name.trim() || 'team';
-    if (teams.some((t) => t.name === n) && !confirm(`Overwrite "${n}"?`)) return;
+    if (teams.some((tm) => tm.name === n) && !confirm(t('Overwrite "{name}"?', { name: n }))) return;
     try {
       const r = await call<{ name: string; path: string }>('save', { name: n, project: { ...project, name: n }, config: generateConfig({ ...project, name: n }) });
-      setMsg(`Saved to ${r.path}`);
+      setMsg(t('Saved to {path}', { path: r.path }));
       refresh();
     } catch (e) {
-      setMsg(`Could not save: ${(e as Error).message}`);
+      setMsg(t('Could not save: {error}', { error: (e as Error).message }));
     }
   };
 
   return (
     <section className="panel library">
       <div className="panel-head">
-        <h2>Teams</h2>
-        <span className="muted small">{dir ? <>saved in <code>{dir}</code> (project .gcbuild.json + gcsim config .txt)</> : 'teams/ folder of the project'}</span>
+        <h2>{t('Teams')}</h2>
+        <span className="muted small">{dir ? <>{t('saved in')} <code>{dir}</code> {t('(project .gcbuild.json + gcsim config .txt)')}</> : t('teams/ folder of the project')}</span>
         <span className="grow" />
-        <input className="lib-search" value={name} onChange={(e) => setName(e.target.value)} placeholder="team name" />
-        <button type="button" className="btn primary small" onClick={save}>Save current team</button>
-        <button type="button" className="icon-btn" onClick={onClose} title="Close">✕</button>
+        <input className="lib-search" value={name} onChange={(e) => setName(e.target.value)} placeholder={t('team name')} />
+        <button type="button" className="btn primary small" onClick={save}>{t('Save current team')}</button>
+        <button type="button" className="icon-btn" onClick={onClose} title={t('Close')}>✕</button>
       </div>
       {msg && <div className="hint small lib-result">{msg}</div>}
       {teams.length ? (
         <table className="sim-table small">
           <tbody>
-            {teams.map((t) => (
-              <tr key={t.name}>
-                <td><b>{t.name}</b></td>
-                <td className="muted">{new Date(t.modified).toLocaleString()}</td>
+            {teams.map((tm) => (
+              <tr key={tm.name}>
+                <td><b>{tm.name}</b></td>
+                <td className="muted">{new Date(tm.modified).toLocaleString()}</td>
                 <td style={{ textAlign: 'right' }}>
                   <button
                     type="button"
                     className="btn ghost small"
                     onClick={async () => {
                       try {
-                        onLoad(await call<Project>('load', { name: t.name }));
-                        setMsg(`Loaded "${t.name}".`);
+                        onLoad(await call<Project>('load', { name: tm.name }));
+                        setMsg(t('Loaded "{name}".', { name: tm.name }));
                       } catch (e) {
-                        setMsg(`Could not load: ${(e as Error).message}`);
+                        setMsg(t('Could not load: {error}', { error: (e as Error).message }));
                       }
                     }}
                   >
-                    Load
+                    {t('Load')}
                   </button>{' '}
                   <button
                     type="button"
                     className="btn ghost small danger"
                     onClick={async () => {
-                      if (!confirm(`Delete "${t.name}" from the teams folder?`)) return;
-                      await call('delete', { name: t.name }).catch(() => {});
+                      if (!confirm(t('Delete "{name}" from the teams folder?', { name: tm.name }))) return;
+                      await call('delete', { name: tm.name }).catch(() => {});
                       refresh();
                     }}
                   >
-                    Delete
+                    {t('Delete')}
                   </button>
                 </td>
               </tr>
@@ -93,7 +94,7 @@ export function TeamsPanel({ project, onLoad, onClose }: { project: Project; onL
           </tbody>
         </table>
       ) : (
-        <div className="muted small">No saved teams yet.</div>
+        <div className="muted small">{t('No saved teams yet.')}</div>
       )}
     </section>
   );

@@ -27,7 +27,7 @@
           root.appendChild(pre);
         }
         window.addEventListener('error', function (e) {
-          show((e.error && e.error.stack) || e.message || (e.target && e.target.src ? 'could not load ' + e.target.src : 'unknown error'));
+          show((e.error && e.error.stack) || e.message || (e.target && (e.target.src || e.target.href) ? 'could not load ' + (e.target.src || e.target.href) : 'unknown error'));
         }, true);
         window.addEventListener('unhandledrejection', function (e) {
           show(String((e.reason && e.reason.stack) || e.reason));

@@ -3,6 +3,7 @@ import { getChar } from '../data';
 import { displayValue, ELEMENTS, FIELDS, fieldOf, isEstimable, OPS, scriptValue, STAT_KEYS, unitSuffix, type FieldDef } from '../lib/conditions';
 import { condToScript } from '../lib/rotation';
 import type { CharBuild, Clause, Condition } from '../lib/types';
+import { t } from '../i18n';
 
 interface Props {
   cond: Condition;
@@ -32,15 +33,15 @@ export function ConditionEditor({ cond, team, statusHints, onChange, defaultChar
       <div className="cond-head small">
         {cond.clauses.length > 1 ? (
           <>
-            match
+            {t('match')}
             <select value={cond.join} onChange={(e) => set((c) => { c.join = e.target.value as Condition['join']; })}>
-              <option value="and">all (and)</option>
-              <option value="or">any (or)</option>
+              <option value="and">{t('all (and)')}</option>
+              <option value="or">{t('any (or)')}</option>
             </select>
-            of:
+            {t('of:')}
           </>
         ) : (
-          'when:'
+          t('when:')
         )}
       </div>
       {cond.clauses.map((clause, i) => (
@@ -56,11 +57,11 @@ export function ConditionEditor({ cond, team, statusHints, onChange, defaultChar
       ))}
       <div className="cond-foot">
         <button type="button" className="btn ghost small" onClick={() => set((c) => { c.clauses.push(newClause(firstChar)); })}>
-          + condition
+          {t('+ condition')}
         </button>
         {needsAssume && (
-          <label className="small muted" title="The timeline estimate can't know HP, statuses or auras. Pick what it should assume. The real sim always evaluates it.">
-            estimate assumes
+          <label className="small muted" title={t("The timeline estimate can't know HP, statuses or auras. Pick what it should assume. The real sim always evaluates it.")}>
+            {t('estimate assumes')}
             <select value={String(cond.assume ?? true)} onChange={(e) => set((c) => { c.assume = e.target.value === 'true'; })}>
               <option value="true">true</option>
               <option value="false">false</option>
@@ -126,11 +127,11 @@ function ClauseRow({
           onChange(rebuild(d, charKey, d.id === 'custom' ? clause.field : '', false));
         }}
       >
-        <optgroup label="Character">
-          {FIELDS.filter((f) => f.scope === 'char').map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}
+        <optgroup label={t('Character')}>
+          {FIELDS.filter((f) => f.scope === 'char').map((f) => <option key={f.id} value={f.id}>{t(f.label)}</option>)}
         </optgroup>
-        <optgroup label="Global">
-          {FIELDS.filter((f) => f.scope !== 'char').map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}
+        <optgroup label={t('Global')}>
+          {FIELDS.filter((f) => f.scope !== 'char').map((f) => <option key={f.id} value={f.id}>{t(f.label)}</option>)}
         </optgroup>
       </select>
 
@@ -147,7 +148,7 @@ function ClauseRow({
             className="clause-arg"
             list={datalistId}
             value={arg}
-            placeholder={def.hint ?? def.arg}
+            placeholder={def.hint ? t(def.hint) : def.arg}
             onChange={(e) => onChange({ ...clause, field: def.build(charKey, e.target.value.trim()) })}
           />
           <datalist id={datalistId}>{suggestions.map((s) => <option key={s} value={s} />)}</datalist>
@@ -168,14 +169,14 @@ function ClauseRow({
           value={clause.op === '!=' ? (clause.value === '1' ? '0' : '1') : clause.value}
           onChange={(e) => onChange({ ...clause, op: '==', value: e.target.value })}
         >
-          <option value="1">is true</option>
-          <option value="0">is false</option>
+          <option value="1">{t('is true')}</option>
+          <option value="0">{t('is false')}</option>
         </select>
       ) : def.unit === 'char' ? (
         <>
           <select value={clause.op} onChange={(e) => onChange({ ...clause, op: e.target.value as Clause['op'] })}>
-            <option value="==">is</option>
-            <option value="!=">is not</option>
+            <option value="==">{t('is')}</option>
+            <option value="!=">{t('is not')}</option>
           </select>
           <select value={clause.value.replace('.keys.char.', '')} onChange={(e) => onChange({ ...clause, value: `.keys.char.${e.target.value}` })}>
             {team.map((b) => <option key={b.key} value={b.key}>{getChar(b.key)?.name ?? b.key}</option>)}
@@ -195,7 +196,7 @@ function ClauseRow({
           </span>
         </>
       )}
-      {onRemove && <button type="button" className="icon-btn" title="Remove condition" onClick={onRemove}>✕</button>}
+      {onRemove && <button type="button" className="icon-btn" title={t('Remove condition')} onClick={onRemove}>✕</button>}
     </div>
   );
 }

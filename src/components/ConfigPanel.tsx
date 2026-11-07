@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { generateConfig, hpMode } from '../lib/config';
 import type { Updater } from '../lib/store';
 import type { Project, SimOptions } from '../lib/types';
+import { t } from '../i18n';
 
 interface Props {
   project: Project;
@@ -75,9 +76,9 @@ function presetOf(o: SimOptions): string {
   return '';
 }
 
-function NumField({ label, value, step, onChange, title }: { label: string; value: number; step?: number; onChange: (n: number) => void; title?: string }) {
+function NumField({ label, value, step, onChange, title, adv }: { label: string; value: number; step?: number; onChange: (n: number) => void; title?: string; adv?: boolean }) {
   return (
-    <label className="field narrow" title={title}>
+    <label className={`field narrow ${adv ? 'adv' : ''}`} title={title}>
       <span>{label}</span>
       <input type="number" step={step ?? 1} value={value} onChange={(e) => onChange(+e.target.value)} />
     </label>
@@ -117,8 +118,8 @@ export function ConfigPanel({ project, update }: Props) {
   return (
     <div className="config-panel">
       <div className="row wrap opts">
-        <label className="field grow" title="Sets the target and energy lines">
-          <span>Target preset</span>
+        <label className="field grow" title={t('Sets the target and energy lines')}>
+          <span>{t('Target preset')}</span>
           <select
             value={presetOf(o)}
             onChange={(e) => {
@@ -126,28 +127,28 @@ export function ConfigPanel({ project, update }: Props) {
               if (pr) update((p) => pr.apply(p.options));
             }}
           >
-            <option value="">custom</option>
-            {TARGET_PRESETS.map((pr) => <option key={pr.id} value={pr.id}>{pr.label}</option>)}
+            <option value="">{t('custom')}</option>
+            {TARGET_PRESETS.map((pr) => <option key={pr.id} value={pr.id}>{t(pr.label)}</option>)}
           </select>
         </label>
         <span className="muted small preset-note">
-          {TARGET_PRESETS.find((x) => x.id === presetOf(o))?.note ?? 'target / energy set by hand'}
-          {hpMode(project) && ' · damage mode: a time_limit function ends each run at the duration'}
+          {(() => { const note = TARGET_PRESETS.find((x) => x.id === presetOf(o))?.note; return note ? t(note) : t('target / energy set by hand'); })()}
+          {hpMode(project) && <span className="adv"> · {t('damage mode: a time_limit function ends each run at the duration')}</span>}
         </span>
-        <label className="check" title="start_energy=0 for every character">
-          <input type="checkbox" checked={!!o.startEnergyZero} onChange={(e) => set('startEnergyZero', e.target.checked)} /> start with 0 energy
+        <label className="check" title={t('start_energy=0 for every character')}>
+          <input type="checkbox" checked={!!o.startEnergyZero} onChange={(e) => set('startEnergyZero', e.target.checked)} /> {t('start with 0 energy')}
         </label>
       </div>
       <div className="row wrap opts">
-        <NumField label="Iterations" value={o.iteration} onChange={(n) => set('iteration', Math.max(1, n))} />
-        <NumField label="Duration (s)" value={o.duration} onChange={(n) => set('duration', Math.max(1, n))} />
-        <NumField label="Swap delay (f)" value={o.swapDelay} onChange={(n) => set('swapDelay', Math.max(0, n))} title="KQMS-style configs commonly use 12; gcsim default is 1" />
-        <label className="check"><input type="checkbox" checked={o.hitlag} onChange={(e) => set('hitlag', e.target.checked)} /> hitlag</label>
-        <NumField label="Target lvl" value={o.targetLvl} onChange={(n) => set('targetLvl', n)} />
-        <NumField label="Resist" value={o.targetResist} step={0.05} onChange={(n) => set('targetResist', n)} />
-        <NumField label="Targets" value={o.targetCount} onChange={(n) => set('targetCount', Math.max(1, Math.min(6, n)))} />
-        <label className="field narrow">
-          <span>Energy</span>
+        <NumField label={t('Duration (s)')} value={o.duration} onChange={(n) => set('duration', Math.max(1, n))} />
+        <NumField label={t('Iterations')} value={o.iteration} onChange={(n) => set('iteration', Math.max(1, n))} adv />
+        <NumField label={t('Swap delay (f)')} value={o.swapDelay} onChange={(n) => set('swapDelay', Math.max(0, n))} title={t('KQMS-style configs commonly use 12; gcsim default is 1')} adv />
+        <label className="check adv"><input type="checkbox" checked={o.hitlag} onChange={(e) => set('hitlag', e.target.checked)} /> {t('hitlag')}</label>
+        <NumField label={t('Target lvl')} value={o.targetLvl} onChange={(n) => set('targetLvl', n)} adv />
+        <NumField label={t('Resist')} value={o.targetResist} step={0.05} onChange={(n) => set('targetResist', n)} adv />
+        <NumField label={t('Targets')} value={o.targetCount} onChange={(n) => set('targetCount', Math.max(1, Math.min(6, n)))} adv />
+        <label className="field narrow adv">
+          <span>{t('Energy')}</span>
           <select value={o.energyMode} onChange={(e) => set('energyMode', e.target.value as SimOptions['energyMode'])}>
             <option value="every">every</option>
             <option value="none">none</option>
@@ -155,23 +156,23 @@ export function ConfigPanel({ project, update }: Props) {
         </label>
         {o.energyMode === 'every' && (
           <>
-            <NumField label="min (f)" value={o.energyMin} onChange={(n) => set('energyMin', n)} />
-            <NumField label="max (f)" value={o.energyMax} onChange={(n) => set('energyMax', n)} />
-            <NumField label="amount" value={o.energyAmount} onChange={(n) => set('energyAmount', n)} />
+            <NumField label={t('min (f)')} value={o.energyMin} onChange={(n) => set('energyMin', n)} adv />
+            <NumField label={t('max (f)')} value={o.energyMax} onChange={(n) => set('energyMax', n)} adv />
+            <NumField label={t('amount')} value={o.energyAmount} onChange={(n) => set('energyAmount', n)} adv />
           </>
         )}
       </div>
-      <div className="row wrap opts">
-        <label className="field grow" title="Extra key=value tokens for the options line, e.g. defhalt=false">
-          <span>Extra options</span>
+      <div className="row wrap opts adv">
+        <label className="field grow" title={t('Extra key=value tokens for the options line, e.g. defhalt=false')}>
+          <span>{t('Extra options')}</span>
           <input value={o.extraOptions ?? ''} placeholder="e.g. defhalt=false" onChange={(e) => set('extraOptions', e.target.value)} />
         </label>
       </div>
-      <div className="row wrap raw-lines">
+      <div className="row wrap raw-lines adv">
         <label className="field grow">
           <span>
-            Target lines {o.rawTargets?.trim() ? '(custom)' : '(generated)'}
-            {o.rawTargets?.trim() && <button type="button" className="btn ghost small" onClick={() => set('rawTargets', '')}>use generated</button>}
+            {t('Target lines')} {o.rawTargets?.trim() ? t('(custom)') : t('(generated)')}
+            {o.rawTargets?.trim() && <button type="button" className="btn ghost small" onClick={() => set('rawTargets', '')}>{t('use generated')}</button>}
           </span>
           <textarea
             spellCheck={false}
@@ -183,8 +184,8 @@ export function ConfigPanel({ project, update }: Props) {
         </label>
         <label className="field grow">
           <span>
-            Energy / hurt lines {o.rawEnergy?.trim() ? '(custom)' : '(generated)'}
-            {o.rawEnergy?.trim() && <button type="button" className="btn ghost small" onClick={() => set('rawEnergy', '')}>use generated</button>}
+            {t('Energy / hurt lines')} {o.rawEnergy?.trim() ? t('(custom)') : t('(generated)')}
+            {o.rawEnergy?.trim() && <button type="button" className="btn ghost small" onClick={() => set('rawEnergy', '')}>{t('use generated')}</button>}
           </span>
           <textarea
             spellCheck={false}
@@ -196,11 +197,11 @@ export function ConfigPanel({ project, update }: Props) {
         </label>
       </div>
       <div className="config-actions">
-        <button type="button" className="btn primary" onClick={copy}>{copied ? 'Copied ✓' : 'Copy config'}</button>
-        <button type="button" className="btn" onClick={download}>Download .txt</button>
-        <a className="btn ghost" href="https://gcsim.app/simulator" target="_blank" rel="noreferrer">Open gcsim ↗</a>
+        <button type="button" className="btn primary" onClick={copy}>{copied ? t('Copied ✓') : t('Copy config')}</button>
+        <button type="button" className="btn" onClick={download}>{t('Download .txt')}</button>
+        <a className="btn ghost" href="https://gcsim.app/simulator" target="_blank" rel="noreferrer">{t('Open gcsim ↗')}</a>
       </div>
-      <pre className="config-text">{text}</pre>
+      <pre className="config-text adv">{text}</pre>
     </div>
   );
 }

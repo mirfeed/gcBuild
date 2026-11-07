@@ -3,12 +3,18 @@ import { ELEMENT_COLORS } from '../data';
 import { charIcon } from '../data/icons';
 import { getChar } from '../data';
 import type { SampleTimeline, SBar } from '../lib/sample';
+import { describeStatus, type StatusInfo } from '../lib/statusNames';
+import { useAdvanced } from '../lib/ui';
 import { useTimelineNav } from '../lib/useTimelineNav';
 import { Icon } from './Combobox';
+import { t } from '../i18n';
 
 interface Props {
   tl: SampleTimeline;
 }
+
+/** a status bar; team buffs merged from several holders carry how many (n) */
+type VBar = SBar & { n?: number };
 
 const STATE_LABEL: Record<string, string> = {
   skill: 'E', burst: 'Q', normal: 'N', charge: 'CA', aim: 'Aim', dash: 'Dash', jump: 'Jump', swap: 'Swap',
@@ -55,7 +61,20 @@ export function SimTimeline({ tl }: Props) {
   const [pxPerSec, setPx] = useState(40);
   const [minDur, setMinDur] = useState(0.5);
   const [filter, setFilter] = useState('');
-  const [show, setShow] = useState({ damage: true, energy: true, hp: true, statuses: true, cooldowns: true, icds: false });
+  const [showSel, setShow] = useState({ damage: true, energy: true, hp: true, statuses: true, cooldowns: true, icds: false });
+  // simple mode: like the estimate (named effects, E/Q cooldowns), without HP, ICDs and other bookkeeping
+  const advanced = useAdvanced();
+  const show = advanced ? showSel : { damage: true, energy: true, hp: false, statuses: true, cooldowns: true, icds: false };
+  const teamStatuses = show.statuses;
+  const effMinDur = advanced ? minDur : 1;
+  const teamKeys = useMemo(() => tl.chars.map((c) => c.key), [tl]);
+  /** readable name, kind and owner per status key */
+  const infos = useMemo(() => {
+    const m = new Map<string, StatusInfo>();
+    for (const b of tl.bars) if (!m.has(b.key)) m.set(b.key, describeStatus(b.key, teamKeys));
+    return m;
+  }, [tl, teamKeys]);
+  const info = (key: string): StatusInfo => infos.get(key) ?? { label: key, kind: key.startsWith('🛡') ? 'shield' : 'buff', internal: false };
   const [hover, setHover] = useState<{ x: number; frame: number } | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const fit = useTimelineNav(scroller, pxPerSec, setPx, 3, 300);
@@ -68,7 +87,9 @@ export function SimTimeline({ tl }: Props) {
   const { visibleBars, sharedBars } = useMemo(() => {
     const q = filter.trim().toLowerCase();
     const bars = tl.bars.filter((b) =>
-      b.end - b.start >= minDur * 60 && (!q || b.key.toLowerCase().includes(q)) && (show.icds || !ICD_RE.test(b.key)));
+      b.end - b.start >= effMinDur * 60
+      && (!q || b.key.toLowerCase().includes(q) || info(b.key).label.toLowerCase().includes(q))
+      && (show.icds || !(ICD_RE.test(b.key) || info(b.key).internal)));
     // same key starting together on several characters = one team buff; ends differ by each holder's hitlag
     const sig = (b: SBar) => `${b.key}@${Math.round(b.start / 10)}`;
     const holders = new Map<string, Set<number>>();
@@ -78,19 +99,26 @@ export function SimTimeline({ tl }: Props) {
       holders.set(sig(b), (holders.get(sig(b)) ?? new Set()).add(b.char));
       lastEnd.set(sig(b), Math.max(lastEnd.get(sig(b)) ?? 0, b.end));
     }
-    const shared: SBar[] = [];
+    const shared: VBar[] = [];
     const seen = new Set<string>();
-    const own: SBar[] = [];
+    let own: VBar[] = [];
     for (const b of bars) {
       if (b.char >= 0 && (holders.get(sig(b))?.size ?? 0) >= 2) {
         if (!seen.has(sig(b))) {
           seen.add(sig(b));
-          shared.push({ ...b, char: SHARED, end: lastEnd.get(sig(b))!, key: `${b.key} ×${holders.get(sig(b))!.size}` });
+          shared.push({ ...b, char: SHARED, end: lastEnd.get(sig(b))!, n: holders.get(sig(b))!.size });
         }
       } else own.push(b);
     }
+    if (!advanced) {
+      // the same effect is often tracked twice (a field on the enemy lane + its buff on whoever stands in it): keep one
+      const sharedLabels = new Set(shared.map((b) => info(b.key).label));
+      own = own.filter((b) => !(b.char < 0 && sharedLabels.has(info(b.key).label)));
+      const teamLabels = new Set([...sharedLabels, ...own.filter((b) => b.char < 0).map((b) => info(b.key).label)]);
+      own = own.filter((b) => b.char < 0 || !teamLabels.has(info(b.key).label));
+    }
     return { visibleBars: own, sharedBars: shared };
-  }, [tl, minDur, filter, show.icds]);
+  }, [tl, effMinDur, filter, show.icds, advanced, infos]);
 
   const lanes = useMemo(() => tl.chars.map((c, i) => ({
     i,
@@ -131,18 +159,25 @@ export function SimTimeline({ tl }: Props) {
   }, [hover, tl, visibleBars, sharedBars, pxPerSec]);
 
   const charColor = (i: number) => (i >= 0 && tl.chars[i] ? ELEMENT_COLORS[tl.chars[i].element] ?? 'var(--accent)' : i === SHARED ? 'var(--buff)' : 'var(--debuff)');
-  const charName = (i: number) => (i >= 0 && tl.chars[i] ? tl.chars[i].name : i === SHARED ? 'team' : 'enemy');
+  const charName = (i: number) => (i >= 0 && tl.chars[i] ? tl.chars[i].name : i === SHARED ? t('team') : t('enemy'));
 
-  const barEl = (b: SBar, k: number) => (
-    <span
-      key={k}
-      className="bar sbar"
-      style={{ left: x(b.start), width: Math.max(2, x(b.end - b.start)), ['--el' as string]: charColor(b.char) }}
-      title={`${b.key}\n${charName(b.char)}\n${sec(b.start)}s → ${sec(b.end)}s (${sec(b.end - b.start)}s)`}
-    >
-      <span className="bar-label">{b.key}</span>
-    </span>
-  );
+  const barEl = (b: VBar, k: number) => {
+    const inf = info(b.key);
+    const ownerIdx = inf.owner ? teamKeys.indexOf(inf.owner) : -1;
+    const label = `${inf.label}${advanced && b.n ? ` ×${b.n}` : ''}`;
+    // a generic "buff" that sits on the enemy is a debuff (RES shred from constellations etc.)
+    const kind = b.char === -1 && inf.kind === 'buff' ? 'debuff' : inf.kind;
+    return (
+      <span
+        key={k}
+        className={`bar sbar kind-${kind}`}
+        style={{ left: x(b.start), width: Math.max(2, x(b.end - b.start)), ['--el' as string]: charColor(ownerIdx >= 0 ? ownerIdx : b.char) }}
+        title={`${label}\n${b.key}${b.n ? ` (×${b.n})` : ''} · ${charName(b.char)}\n${sec(b.start)}s → ${sec(b.end)}s (${sec(b.end - b.start)}s)`}
+      >
+        <span className="bar-label">{label}</span>
+      </span>
+    );
+  };
 
   const ROW = 20;
   const laneHeight = (l: (typeof lanes)[number]) =>
@@ -153,32 +188,32 @@ export function SimTimeline({ tl }: Props) {
     <div className="timeline sim-tl">
       <div className="tl-controls">
         <label className="field inline">
-          <span>Zoom</span>
+          <span>{t('Zoom')}</span>
           <input type="range" min={3} max={300} value={pxPerSec} onChange={(e) => setPx(+e.target.value)} />
         </label>
-        <button type="button" className="btn ghost small" onClick={() => fit(tl.end / 60 + 1)} title="Fit the whole sample in view">Fit</button>
-        <span className="muted small">drag to pan · Ctrl+wheel to zoom</span>
-        <label className="field inline" title="Hide statuses shorter than this">
-          <span>Min status</span>
+        <button type="button" className="btn ghost small" onClick={() => fit(tl.end / 60 + 1)} title={t('Fit the whole sample in view')}>{t('Fit')}</button>
+        <span className="muted small">{t('drag to pan · Ctrl+wheel to zoom')}</span>
+        <label className="field inline adv" title={t('Hide statuses shorter than this')}>
+          <span>{t('Min status')}</span>
           <select value={minDur} onChange={(e) => setMinDur(+e.target.value)}>
-            {[0, 0.5, 1, 2, 5].map((v) => <option key={v} value={v}>{v ? `${v}s` : 'all'}</option>)}
+            {[0, 0.5, 1, 2, 5].map((v) => <option key={v} value={v}>{v ? `${v}s` : t('all')}</option>)}
           </select>
         </label>
-        <input className="tl-filter" placeholder="filter statuses…" value={filter} onChange={(e) => setFilter(e.target.value)} />
-        {(Object.keys(show) as (keyof typeof show)[]).map((k) => (
-          <label key={k} className="check">
-            <input type="checkbox" checked={show[k]} onChange={(e) => setShow((s) => ({ ...s, [k]: e.target.checked }))} /> {k}
+        <input className="tl-filter adv" placeholder={t('filter statuses…')} value={filter} onChange={(e) => setFilter(e.target.value)} />
+        {(Object.keys(showSel) as (keyof typeof showSel)[]).map((k) => (
+          <label key={k} className="check adv">
+            <input type="checkbox" checked={showSel[k]} onChange={(e) => setShow((s) => ({ ...s, [k]: e.target.checked }))} /> {t(k)}
           </label>
         ))}
-        <span className="tl-stat small muted">sample: {sec(tl.end)}s · {tl.damage.length} hits · {reactions.length} reactions</span>
+        <span className="tl-stat small muted">{t('sample: {s}s · {h} hits · {r} reactions', { s: sec(tl.end), h: tl.damage.length, r: reactions.length })}</span>
       </div>
 
       <div className="tl-body">
         <div className="tl-labels">
-          <div className="tl-label ruler-label">time (s)</div>
-          <div className="tl-label actions-label">Actions</div>
+          <div className="tl-label ruler-label">{t('time (s)')}</div>
+          <div className="tl-label actions-label">{t('Actions')}</div>
           <div className="tl-label lane-label" style={{ ['--el' as string]: 'var(--accent)', height: 34 }}>
-            <span className="lane-text"><span className="lane-name">Enemy</span><span className="muted small lane-sub">elements · reactions</span></span>
+            <span className="lane-text"><span className="lane-name">{t('Enemy')}</span><span className="muted small lane-sub">{t('elements · reactions')}</span></span>
           </div>
           {lanes.map((l) => (
             <div key={l.i} className="tl-label lane-label" style={{ ['--el' as string]: l.color, height: laneHeight(l) }}>
@@ -186,19 +221,19 @@ export function SimTimeline({ tl }: Props) {
               <span className="lane-text">
                 <span className="lane-name">{l.c.name}</span>
                 <span className="muted small lane-sub">
-                  {[show.damage && 'damage', show.energy && l.energy?.points.length && 'energy', show.hp && l.hp && 'HP', show.cooldowns && 'E/Q CD'].filter(Boolean).join(' · ')}
+                  {[show.damage && t('damage'), show.energy && l.energy?.points.length && t('energy'), show.hp && l.hp && 'HP', show.cooldowns && 'E/Q CD'].filter(Boolean).join(' · ')}
                 </span>
               </span>
             </div>
           ))}
-          {show.statuses && sharedRows.length > 0 && (
+          {teamStatuses && sharedRows.length > 0 && (
             <div className="tl-label lane-label" style={{ ['--el' as string]: 'var(--buff)', height: sharedRows.length * ROW + 8 }}>
-              <span className="lane-text"><span className="lane-name">Team buffs</span><span className="muted small lane-sub">on several characters (×N)</span></span>
+              <span className="lane-text"><span className="lane-name">{t('Team buffs')}</span><span className="muted small lane-sub">{t('on several characters (×N)')}</span></span>
             </div>
           )}
           {show.statuses && teamRows.length > 0 && (
             <div className="tl-label lane-label" style={{ ['--el' as string]: 'var(--debuff)', height: teamRows.length * ROW + 8 }}>
-              <span className="lane-text"><span className="lane-name">Team / enemy</span><span className="muted small lane-sub">debuffs · shields · core</span></span>
+              <span className="lane-text"><span className="lane-name">{t('Team / enemy')}</span><span className="muted small lane-sub">{t('debuffs · shields · core')}</span></span>
             </div>
           )}
         </div>
@@ -226,7 +261,7 @@ export function SimTimeline({ tl }: Props) {
                   key={k}
                   className="step"
                   style={{ left: x(a.start), width: Math.max(2, x(a.end - a.start)), ['--el' as string]: charColor(a.char) }}
-                  title={`${charName(a.char)} ${a.state}\n${sec(a.start)}s → ${sec(a.end)}s (${a.end - a.start}f incl. hitlag)`}
+                  title={`${charName(a.char)} ${a.state}\n${sec(a.start)}s → ${sec(a.end)}s (${t('{n}f incl. hitlag', { n: a.end - a.start })})`}
                 >
                   <span className="step-label">{STATE_LABEL[a.state] ?? a.state}</span>
                 </span>
@@ -236,7 +271,7 @@ export function SimTimeline({ tl }: Props) {
                   key={`f${k}`}
                   className="fail-block"
                   style={{ left: x(w.start), width: Math.max(2, x(w.end - w.start)) }}
-                  title={`${w.what} not ready: waited ${sec(w.end - w.start)}s`}
+                  title={t('{what} not ready: waited {s}s', { what: w.what, s: sec(w.end - w.start) })}
                 />
               ))}
             </div>
@@ -247,7 +282,7 @@ export function SimTimeline({ tl }: Props) {
                   key={k}
                   className="app-dot"
                   style={{ left: x(a.frame), background: ELEMENT_COLORS[a.ele] ?? 'var(--muted)' }}
-                  title={`${sec(a.frame)}s ${a.ele} applied by ${charName(a.char)} (${a.abil})\naura after: ${a.aura.join(', ') || 'none'}`}
+                  title={`${t('{t}s {ele} applied by {who} ({abil})', { t: sec(a.frame), ele: a.ele, who: charName(a.char), abil: a.abil })}\n${t('aura after: {aura}', { aura: a.aura.join(', ') || t('none') })}`}
                 />
               ))}
               {reactions.map((d, k) => (
@@ -291,7 +326,7 @@ export function SimTimeline({ tl }: Props) {
                         return `${prev ? `${x(p.frame)},${y(prev.value)} ` : ''}${x(p.frame)},${y(p.value)}`;
                       }).join(' ')}
                     />
-                    <text x={4} y={9} className="line-label">energy</text>
+                    <text x={4} y={9} className="line-label">{t('energy')}</text>
                   </svg>
                 ) : null}
                 {show.hp && l.hp && (
@@ -314,7 +349,7 @@ export function SimTimeline({ tl }: Props) {
                     {(['skill', 'burst'] as const).map((type) => (
                       <div key={type} className="tl-lane thin">
                         {l.cds.filter((c) => c.type === type).map((c, k) => (
-                          <span key={k} className="bar kind-cd" style={{ left: x(c.start), width: Math.max(2, x(c.end - c.start)) }} title={`${type} cooldown ${sec(c.start)}s → ${sec(c.end)}s`}>
+                          <span key={k} className="bar kind-cd" style={{ left: x(c.start), width: Math.max(2, x(c.end - c.start)) }} title={`${type === 'skill' ? 'E' : 'Q'} ${t('cooldown')} ${sec(c.start)}s → ${sec(c.end)}s`}>
                             <span className="bar-label">{type === 'skill' ? 'E CD' : 'Q CD'}</span>
                           </span>
                         ))}
@@ -328,7 +363,7 @@ export function SimTimeline({ tl }: Props) {
               </div>
             ))}
 
-            {show.statuses && sharedRows.length > 0 && (
+            {teamStatuses && sharedRows.length > 0 && (
               <div className="tl-lane-group sim-group" style={{ ['--el' as string]: 'var(--buff)', height: sharedRows.length * ROW + 8 }}>
                 {sharedRows.map((r, k) => <div key={k} className="tl-lane">{r.map(barEl)}</div>)}
               </div>
@@ -346,15 +381,15 @@ export function SimTimeline({ tl }: Props) {
       <div className="tl-inspector small">
         {hoverInfo ? (
           <>
-            <b>{sec(hover!.frame)}s</b> (frame {hover!.frame})
+            <b>{sec(hover!.frame)}s</b> ({t('frame')} {hover!.frame})
             {hoverInfo.actions.map((a, k) => (
               <span key={k}> · <b style={{ color: charColor(a.char) }}>{charName(a.char)} {a.state}</b></span>
             ))}
-            {hoverInfo.fails.map((w, k) => <span key={`f${k}`} className="warn"> · waiting: {w.what} not ready</span>)}
+            {hoverInfo.fails.map((w, k) => <span key={`f${k}`} className="warn"> · {t('waiting: {what} not ready', { what: w.what })}</span>)}
             <div className="insp-list">
               {hoverInfo.energy.filter((e) => e.max).map((e) => (
                 <span key={`e${e.char}`} className="insp" style={{ ['--el' as string]: charColor(e.char) }}>
-                  <span className="insp-who">{charName(e.char).split(' ')[0]}</span> {e.v.toFixed(1)}/{e.max} energy
+                  <span className="insp-who">{charName(e.char).split(' ')[0]}</span> {e.v.toFixed(1)}/{e.max} {t('energy')}
                 </span>
               ))}
             </div>
@@ -371,14 +406,14 @@ export function SimTimeline({ tl }: Props) {
             <div className="insp-list">
               {hoverInfo.bars.slice(0, 30).map((b, k) => (
                 <span key={k} className="insp kind-buff" style={{ ['--el' as string]: charColor(b.char) }}>
-                  <span className="insp-who">{charName(b.char).split(' ')[0]}</span> {b.key} <span className="muted">{sec(b.end - hover!.frame)}s left</span>
+                  <span className="insp-who">{charName(b.char).split(' ')[0]}</span> {info(b.key).label} <span className="muted">{t('{s}s left', { s: sec(b.end - hover!.frame) })}</span>
                 </span>
               ))}
             </div>
           </>
         ) : (
           <span className="muted">
-            Real timeline from one gcsim iteration (hitlag included). Hover to see actions, energy, damage and reactions at that moment. Coloured ticks are hits; outlined ticks reacted.
+            {t('Real timeline from one gcsim iteration (hitlag included). Hover to see actions, energy, damage and reactions at that moment. Coloured ticks are hits; outlined ticks reacted.')}
           </span>
         )}
       </div>

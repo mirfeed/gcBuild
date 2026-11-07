@@ -12,6 +12,8 @@ call :checknode
 if errorlevel 1 exit /b 1
 
 echo [1/2] Installing packages...
+rem the browser version does not need the Electron binary (only the desktop app build does)
+set ELECTRON_SKIP_BINARY_DOWNLOAD=1
 call npm install
 if errorlevel 1 (
   echo npm install failed. Check the internet connection and run setup.bat again.

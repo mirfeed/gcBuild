@@ -100,6 +100,13 @@ pre.blk-raw { margin: 0; padding: 6px 8px; font-size: 11.5px; background: var(--
 .line-strip { display: block; flex: none; }
 .line-label { font-size: 9px; fill: var(--muted); }
 .sbar { top: 2px; bottom: 2px; background: color-mix(in srgb, var(--el) 28%, transparent); border-color: color-mix(in srgb, var(--el) 65%, transparent); }
+/* named effects use the estimate's kind colours */
+.sbar.kind-buff { background: color-mix(in srgb, var(--buff) 30%, transparent); border-color: var(--buff); }
+.sbar.kind-debuff { background: color-mix(in srgb, var(--debuff) 28%, transparent); border-color: var(--debuff); }
+.sbar.kind-shield { background: color-mix(in srgb, var(--shield) 28%, transparent); border-color: var(--shield); }
+.sbar.kind-state { background: color-mix(in srgb, var(--el) 50%, transparent); border-color: var(--el); }
+.sbar.kind-field { background: color-mix(in srgb, var(--el) 30%, transparent); border-color: color-mix(in srgb, var(--el) 70%, transparent); }
+.sbar.kind-summon { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--el) 40%, transparent), color-mix(in srgb, var(--el) 40%, transparent) 6px, color-mix(in srgb, var(--el) 25%, transparent) 6px, color-mix(in srgb, var(--el) 25%, transparent) 12px); border-color: var(--el); }
 .fail-block {
   position: absolute; top: 2px; height: 6px; border-radius: 2px;
   background: repeating-linear-gradient(45deg, var(--danger), var(--danger) 3px, transparent 3px, transparent 6px);
@@ -219,3 +226,114 @@ button.art-card:not(:disabled):hover { border-color: var(--accent); }
   margin-top: 16px; padding: 12px; max-height: 50vh; overflow: auto; font-size: 12px;
   white-space: pre-wrap; background: var(--panel, #1b1f27); border: 1px solid var(--border, #333); border-radius: 6px;
 }
+
+/* ------------------------------------------------------------------ simple / advanced mode */
+.app.simple .adv { display: none !important; }
+.app.advanced .simple-only { display: none !important; }
+
+/* ------------------------------------------------------------------ lighter look */
+.panel { border-color: transparent; padding: 16px 18px; border-radius: 14px; }
+.panel-head { margin-bottom: 12px; }
+.panel-head h2 { font-size: 15.5px; letter-spacing: 0.01em; }
+.card { border-color: color-mix(in srgb, var(--border) 55%, transparent); }
+.char-card { border-top-width: 2px; }
+.field > span:first-child { text-transform: none; letter-spacing: 0; font-size: 11.5px; }
+.btn.ghost { border-color: transparent; }
+.btn.ghost:hover:not(:disabled) { border-color: transparent; background: var(--card-2); }
+.btn.ghost.on { background: var(--card-2); color: var(--accent); }
+.pal-row { border-color: transparent; border-left-width: 3px; }
+.pal-row.util { border-left-color: transparent; background: transparent; padding-left: 4px; }
+.seq-section { border-color: transparent; }
+.seq-section.target { border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+.tl-body, .tl-inspector { border-color: color-mix(in srgb, var(--border) 60%, transparent); }
+.kqms { border-top-style: solid; border-top-color: color-mix(in srgb, var(--border) 50%, transparent); }
+.collapse .caret { color: var(--muted); font-size: 12px; width: 12px; }
+
+/* header */
+.app-head { gap: 12px; padding: 2px 2px 4px; }
+.brand h1 { font-size: 18px; letter-spacing: 0.02em; }
+.logo { width: 32px; height: 32px; font-size: 19px; border-radius: 9px; border-color: transparent; }
+.project-name { border-color: transparent; background: transparent; max-width: 300px; }
+.project-name:hover, .project-name:focus { border-color: var(--border); background: var(--panel); }
+.head-actions { align-items: center; gap: 2px; }
+.head-sep { width: 1px; height: 20px; background: var(--border); margin: 0 6px; }
+.count { margin-left: 5px; font-size: 11px; color: var(--muted); background: var(--card-2); border-radius: 8px; padding: 0 6px; }
+.lang-switch { margin-right: 8px; }
+.lang-switch button { padding: 3px 8px; font-weight: 600; }
+.switch { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); cursor: pointer; user-select: none; }
+.switch input { appearance: none; width: 30px; height: 17px; border-radius: 9px; background: var(--card-2); border: 1px solid var(--border); position: relative; margin: 0; cursor: pointer; padding: 0; }
+.switch input::after { content: ''; position: absolute; top: 2px; left: 2px; width: 11px; height: 11px; border-radius: 50%; background: var(--muted); transition: transform 0.15s; }
+.switch input:checked { background: var(--accent-2); border-color: var(--accent-2); }
+.switch input:checked::after { transform: translateX(13px); background: #fff; }
+.switch input:checked + span { color: var(--text); }
+
+/* dropdown menu */
+.menu { position: relative; }
+.menu > .btn { font-size: 16px; line-height: 1; padding: 4px 10px; }
+.menu-pop {
+  position: absolute; right: 0; top: calc(100% + 4px); z-index: 60; min-width: 210px; padding: 5px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 12px 32px rgb(0 0 0 / 0.35);
+  display: flex; flex-direction: column;
+}
+.menu-item { text-align: left; background: none; border: 0; border-radius: 6px; padding: 6px 10px; white-space: nowrap; }
+.menu-item:hover:not(:disabled) { background: var(--card-2); }
+.menu-foot { border-top: 1px solid var(--border); margin-top: 4px; padding: 6px 10px 2px; }
+.seg button { white-space: nowrap; }
+.field.narrow { width: auto; min-width: 86px; }
+.field.narrow > span:first-child { white-space: nowrap; }
+.field.narrow > input, .field.narrow > select { width: 86px; }
+.act-btn { padding: 3px 7px; min-width: 30px; }
+
+/* talents: no spinner arrows over the digits (wheel / typing / ↑↓ still work) */
+.talents input { width: 38px; text-align: center; padding: 4px 2px; -moz-appearance: textfield; appearance: textfield; }
+.talents input::-webkit-inner-spin-button, .talents input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+/* ------------------------------------------------------------------ help */
+.help-btn { font-weight: 700; width: 30px; justify-content: center; padding: 4px 0; }
+.help-steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px 18px; }
+.help-steps li { display: flex; gap: 10px; align-items: flex-start; }
+.help-steps p { margin: 2px 0 0; color: var(--muted); line-height: 1.45; }
+.help-steps code, .help-tips code { font-size: 12px; background: var(--card-2); padding: 0 4px; border-radius: 4px; color: var(--text); }
+.help-num {
+  flex: none; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 12px;
+  background: color-mix(in srgb, var(--accent) 22%, transparent); color: var(--accent);
+}
+.help-tips { margin-top: 14px; padding-top: 10px; border-top: 1px solid color-mix(in srgb, var(--border) 60%, transparent); }
+.help-tips ul { margin: 4px 0 0; padding-left: 18px; color: var(--muted); line-height: 1.6; }
+
+/* ------------------------------------------------------------------ backgrounds (no game art: glows + element tints) */
+body:has(.app.fancy) {
+  background:
+    radial-gradient(900px 520px at 8% -8%, color-mix(in srgb, #7aa2ff 16%, transparent), transparent 70%),
+    radial-gradient(800px 480px at 96% 4%, color-mix(in srgb, #c48cff 12%, transparent), transparent 70%),
+    radial-gradient(1000px 600px at 50% 105%, color-mix(in srgb, #4fd1c5 9%, transparent), transparent 70%),
+    var(--bg);
+  background-attachment: fixed;
+}
+/* no backdrop-filter: it would make panels the containing block of fixed overlays (the artifact picker) */
+.app.fancy .panel { background: color-mix(in srgb, var(--panel) 86%, transparent); }
+.app.fancy .char-card:not(.empty) {
+  position: relative; isolation: isolate;
+  background: linear-gradient(170deg, color-mix(in srgb, var(--el) 16%, var(--card)) 0%, var(--card) 46%);
+}
+/* a card with an open dropdown / picker goes above its neighbours and the panels below */
+.app.fancy .char-card:has(.combo-pop, .modal-back), .app.fancy .char-card:focus-within { z-index: 30; }
+/* faded portrait in the corner: cropped inside its own box, so the card itself never clips (dropdowns stay visible) */
+.app.fancy .char-card:not(.empty)::before {
+  content: ''; position: absolute; z-index: -1; right: 0; top: 0; width: 150px; height: 150px;
+  border-top-right-radius: var(--radius);
+  background: var(--art) right -26px top -16px / 172px 172px no-repeat; opacity: 0.13; filter: saturate(1.2);
+  mask-image: radial-gradient(circle at 62% 38%, #000 35%, transparent 70%);
+  pointer-events: none;
+}
+.app.fancy .pal-row:not(.util) { background: linear-gradient(90deg, color-mix(in srgb, var(--el) 12%, var(--card)), var(--card) 60%); }
+.app.fancy .seq-section { background: color-mix(in srgb, var(--card) 85%, transparent); }
+.app.fancy .lib-card { background: linear-gradient(170deg, color-mix(in srgb, var(--el, var(--accent)) 12%, var(--card)), var(--card) 50%); }
+
+/* ------------------------------------------------------------------ desktop app: update banner */
+.update-banner {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 14px; border-radius: 10px; font-size: 13px;
+  background: color-mix(in srgb, var(--accent) 12%, var(--panel)); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+}
+.update-banner.ready { background: color-mix(in srgb, var(--ok) 14%, var(--panel)); border-color: color-mix(in srgb, var(--ok) 45%, transparent); }
+.update-banner.warn { background: color-mix(in srgb, var(--warn) 12%, var(--panel)); border-color: color-mix(in srgb, var(--warn) 40%, transparent); }

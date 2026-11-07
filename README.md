@@ -4,6 +4,10 @@
 
 A local web app for building and running [gcsim](https://gcsim.app) configs without writing script by hand:
 
+- **Language and modes.** *EN / RU* in the header switches the interface language (defaults to the system
+  language). The app starts in a **simple mode** with only the essentials; *Advanced* shows every setting (KQMS
+  details and substat rolls, level, logic blocks, gcsim optimizer, all sim options, the raw config). Rarely used
+  actions (new / example team, import config, open / export, report a bug) are in the **⋯** menu.
 - **KQMS builds in one click.** Pick character, weapon and sets, then press *Generate KQMS*. Substats follow the
   KQM Standards used by gcsim's substat optimizer: 5★ main stats, 2 fixed rolls of every substat, and 20 liquid
   rolls capped at 10 per stat minus 2 per matching main stat. Liquid rolls go to ER until the ER target is met,
@@ -69,6 +73,47 @@ folder). Updating doesn't touch them:
   `setup.bat`.
 
 The same two folders are what to copy to move your data to another PC.
+
+## Desktop app (Windows)
+
+The builder also ships as a normal program: `gcBuild-Setup-<version>.exe` installs it (no admin rights needed),
+adds a desktop shortcut and opens it in its own window. No Node.js, no `setup.bat`, no console window.
+
+- **Data** lives in `%APPDATA%\gcBuild` (`userdata/`, `teams/`, `tools/gcsim.exe`), so reinstalling or updating
+  keeps it. ⋯ menu → *Open data folder* shows it.
+- **Coming from the start.bat version?** On first launch the app offers to copy artifacts, My builds, teams and
+  the downloaded gcsim from the old folder (or later: ⋯ menu → *Import from old folder*). Existing files are
+  never overwritten.
+- **gcsim** is not bundled (it is AGPL): *Download gcsim* in the Simulate panel fetches it once, as before.
+- The installer is not code-signed, so Windows SmartScreen warns on first run: *More info → Run anyway*.
+- **Updates** come from GitHub Releases: the app checks on start and every 6 hours, downloads a new version in
+  the background and shows *Restart to update* (if you pick *Later*, it installs when you close the app).
+  ⋯ menu → *Check for updates* checks right away.
+
+Building it (from the repo, after `npm install`):
+
+```sh
+npm run app        # build and start the desktop app from the repo
+npm run dist:win   # build the installer into release/gcBuild-Setup-<version>.exe
+```
+
+Publishing a new version (the GitHub Actions workflow `.github/workflows/release.yml` builds it):
+
+```sh
+npm version 0.2.0          # bumps package.json, commits and tags v0.2.0
+git push --follow-tags     # the workflow builds the installer and attaches it to a draft release
+```
+
+Then open *Releases* on GitHub, describe the changes and press *Publish release*: installed apps pick it up
+within a few hours (or at the next start). Drafts are invisible to the apps, so nothing ships until you publish.
+`npm run release:win` does the same from your PC (needs `GH_TOKEN`, e.g. `GH_TOKEN=$(gh auth token)`).
+`GCBUILD_UPDATE_URL=<url>` makes the app read updates from a plain HTTP folder (`latest.yml` + installer) to test
+an update without publishing.
+
+How it works: `electron/main.ts` runs the same local API as the dev server (`server/*.ts`) on a random
+127.0.0.1 port guarded by a per-launch token; the window loads `app://gcbuild/`, which is proxied to it, so the
+origin (and the browser storage tied to it) never changes and no fixed port can be taken. Links open in the
+system browser. `GCBUILD_DATA=<folder>` points the app at another data folder (handy for testing).
 
 ## Reporting a bug
 

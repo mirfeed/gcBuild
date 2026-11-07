@@ -13,6 +13,7 @@ import type { ActionType, CharBuild, CharData, Condition, Project, RotationActio
 import { Icon } from './Combobox';
 import { ConditionEditor, newClause } from './ConditionEditor';
 import { NotationBox } from './NotationBox';
+import { t } from '../i18n';
 
 export interface Cursor {
   listId: ListId;
@@ -195,12 +196,12 @@ export function RotationBuilder(props: Props) {
                 <span className="kbd">{i + 1}</span>
                 <span className="avatar-wrap sm"><Icon src={charIcon(c.id)} rarity={c.rarity} size={28} className="avatar" /></span>
                 <span className="pal-name">{c.name}</span>
-                <span className="pal-ready small" title="At the insertion cursor (estimate)">
-                  <span className={r && r.skillIn > 0 ? 'cd' : 'ok'} title={`E cooldown ${cds.skill}s`}>
-                    E {r && r.skillIn > 0 ? fmtS(r.skillIn) : 'ready'}{r && r.skillMaxCharges > 1 ? ` (${r.skillCharges}/${r.skillMaxCharges})` : ''}
+                <span className="pal-ready small" title={t('At the insertion cursor (estimate)')}>
+                  <span className={r && r.skillIn > 0 ? 'cd' : 'ok'} title={t('E cooldown {n}s', { n: cds.skill })}>
+                    E {r && r.skillIn > 0 ? fmtS(r.skillIn) : t('ready')}{r && r.skillMaxCharges > 1 ? ` (${r.skillCharges}/${r.skillMaxCharges})` : ''}
                   </span>
-                  <span className={r && r.burstIn > 0 ? 'cd' : 'ok'} title={`Q cooldown ${cds.burst}s · ${c.energy} energy`}>
-                    Q {r && r.burstIn > 0 ? fmtS(r.burstIn) : 'ready'}
+                  <span className={r && r.burstIn > 0 ? 'cd' : 'ok'} title={t('Q cooldown {n}s · {e} energy', { n: cds.burst, e: c.energy })}>
+                    Q {r && r.burstIn > 0 ? fmtS(r.burstIn) : t('ready')}
                   </span>
                 </span>
               </div>
@@ -211,9 +212,9 @@ export function RotationBuilder(props: Props) {
                   const cd = btn.action === 'skill' ? cooldowns(c, btn.params ?? {}).skill : btn.action === 'burst' ? cds.burst : null;
                   const tip = [
                     btn.title,
-                    `${fs.generic ? '~' : ''}${framesUntil(fs.slice, null)}f animation, ${framesUntil(fs.slice, 'swap')}f to swap`,
-                    cd ? `cooldown ${cd}s` : '',
-                    btn.hotkey ? `hotkey ${btn.hotkey}` : '',
+                    t('{a}f animation, {b}f to swap', { a: `${fs.generic ? '~' : ''}${framesUntil(fs.slice, null)}`, b: framesUntil(fs.slice, 'swap') }),
+                    cd ? t('cooldown {n}s', { n: cd }) : '',
+                    btn.hotkey ? t('hotkey {k}', { k: btn.hotkey }) : '',
                   ].filter(Boolean).join(' · ');
                   const notReady = (btn.action === 'skill' && r && r.skillIn > 0) || (btn.action === 'burst' && r && r.burstIn > 0);
                   return (
@@ -228,7 +229,7 @@ export function RotationBuilder(props: Props) {
                         add(act(b.key, btn.action, { params: btn.params ?? {}, repeat: btn.repeat ?? 1 }));
                       }}
                     >
-                      {btn.label}
+                      {t(btn.label)}
                     </button>
                   );
                 })}
@@ -236,18 +237,18 @@ export function RotationBuilder(props: Props) {
             </div>
           );
         })}
-        {!team.some(Boolean) && <div className="muted">Add characters above to start building a rotation.</div>}
+        {!team.some(Boolean) && <div className="muted">{t('Add characters above to start building a rotation.')}</div>}
         <div className="pal-row util">
-          <div className="pal-char"><span className="pal-name">Timing</span></div>
+          <div className="pal-char"><span className="pal-name">{t('Timing')}</span></div>
           <div className="pal-btns">
-            <input type="number" className="wait-input" min={1} value={waitFrames} onChange={(e) => setWaitFrames(Math.max(1, +e.target.value || 1))} title="frames (60 = 1s)" />
+            <input type="number" className="wait-input" min={1} value={waitFrames} onChange={(e) => setWaitFrames(Math.max(1, +e.target.value || 1))} title={t('frames (60 = 1s)')} />
             <span className="muted small">f</span>
-            <button type="button" className="act-btn" onClick={() => add(act('', 'wait', { frames: waitFrames }))} title="wait(n): idle for n frames (hotkey W)">Wait</button>
-            <button type="button" className="act-btn" onClick={() => add(act('', 'delay', { frames: waitFrames }))} title="delay(n): delay the next action by n frames">Delay</button>
+            <button type="button" className="act-btn" onClick={() => add(act('', 'wait', { frames: waitFrames }))} title={t('wait(n): idle for n frames (hotkey W)')}>{t('Wait')}</button>
+            <button type="button" className="act-btn" onClick={() => add(act('', 'delay', { frames: waitFrames }))} title={t('delay(n): delay the next action by n frames')}>{t('Delay')}</button>
           </div>
         </div>
-        <div className="pal-row util">
-          <div className="pal-char"><span className="pal-name">Logic</span><span className="muted small">inserts a block at the cursor</span></div>
+        <div className="pal-row util adv">
+          <div className="pal-char"><span className="pal-name">{t('Logic')}</span><span className="muted small">{t('inserts a block at the cursor')}</span></div>
           <div className="pal-btns">
             <button
               type="button"
@@ -255,13 +256,13 @@ export function RotationBuilder(props: Props) {
               title="if <condition> { … } else { … }"
               onClick={() => add({ kind: 'if', id: uid(), cond: readyCond(firstChar || 'char', 'burst'), then: [], else: [] })}
             >
-              If…
+              {t('If…')}
             </button>
-            <button type="button" className="act-btn" title="for N times { … }" onClick={() => add({ kind: 'repeat', id: uid(), count: 3, body: [] })}>
-              Repeat ×N
+            <button type="button" className="act-btn" title={t('for N times { … }')} onClick={() => add({ kind: 'repeat', id: uid(), count: 3, body: [] })}>
+              {t('Repeat ×N')}
             </button>
-            <button type="button" className="act-btn" title="raw gcsim script" onClick={() => add({ kind: 'raw', id: uid(), text: '# gcsim script' })}>
-              Script
+            <button type="button" className="act-btn" title={t('raw gcsim script')} onClick={() => add({ kind: 'raw', id: uid(), text: '# gcsim script' })}>
+              {t('Script')}
             </button>
           </div>
         </div>
@@ -274,12 +275,12 @@ export function RotationBuilder(props: Props) {
           return (
             <div key={s} className={`seq-section ${targetSection === s ? 'target' : ''}`}>
               <div className="seq-head">
-                <strong>{s === 'opener' ? 'Opener' : 'Rotation loop'}</strong>
+                <strong>{s === 'opener' ? t('Opener') : t('Rotation loop')}</strong>
                 <span className="muted small">
-                  {s === 'opener' ? 'runs once' : project.rotation.loopMode === 'while' ? 'repeats until the sim ends' : `repeats ${project.rotation.loopCount}×`}
+                  {s === 'opener' ? t('runs once') : project.rotation.loopMode === 'while' ? t('repeats until the sim ends') : t('repeats {n}×', { n: project.rotation.loopCount })}
                 </span>
                 {s === 'loop' && (
-                  <span className="loop-opts">
+                  <span className="loop-opts adv">
                     <select value={project.rotation.loopMode} onChange={(e) => update((p) => { p.rotation.loopMode = e.target.value as 'while' | 'for'; })}>
                       <option value="while">while 1</option>
                       <option value="for">for N</option>
@@ -294,14 +295,14 @@ export function RotationBuilder(props: Props) {
                     type="button"
                     className="btn ghost small"
                     onClick={() => {
-                      if (confirm(`Clear the ${s === 'opener' ? 'opener' : 'loop'}?`)) {
+                      if (confirm(s === 'opener' ? t('Clear the opener?') : t('Clear the loop?'))) {
                         update((p) => { p.rotation[s] = []; });
                         setCursor({ listId: s, afterId: null });
                         setSelected(null);
                       }
                     }}
                   >
-                    Clear
+                    {t('Clear')}
                   </button>
                 )}
               </div>
@@ -309,7 +310,7 @@ export function RotationBuilder(props: Props) {
                 items={list}
                 listId={s}
                 ctx={ctx}
-                empty={s === 'opener' ? 'Optional. Actions here run once before the loop.' : 'Click action buttons (or press 1-4, then E / Q / A / C) to add actions.'}
+                empty={s === 'opener' ? t('Optional. Actions here run once before the loop.') : t('Click action buttons (or press 1-4, then E / Q / A / C) to add actions.')}
               />
             </div>
           );
@@ -344,12 +345,12 @@ export function RotationBuilder(props: Props) {
                 setSelected(copy.id);
               }}
             >
-              Duplicate
+              {t('Duplicate')}
             </button>
             <button
               type="button"
               className="btn ghost small"
-              title="Put this inside an if block"
+              title={t('Put this inside an if block')}
               onClick={() => {
                 const id = uid();
                 update((p) => {
@@ -361,19 +362,19 @@ export function RotationBuilder(props: Props) {
                 setSelected(id);
               }}
             >
-              Wrap in If
+              {t('Wrap in If')}
             </button>
             <button
               type="button"
               className="btn ghost small"
-              title="Put this inside a repeat block"
+              title={t('Put this inside a repeat block')}
               onClick={() => {
                 const id = uid();
                 update((p) => { const l = locate(p.rotation, sel.id); if (l) l.list.splice(l.index, 1, { kind: 'repeat', id, count: 2, body: [l.item] }); });
                 setSelected(id);
               }}
             >
-              Wrap in Repeat
+              {t('Wrap in Repeat')}
             </button>
             {!isAction(sel) && sel.kind !== 'raw' && (
               <button
@@ -384,14 +385,14 @@ export function RotationBuilder(props: Props) {
                   if (x && !isAction(x) && x.kind !== 'raw') x.collapsed = !x.collapsed;
                 })}
               >
-                {sel.collapsed ? 'Expand' : 'Collapse'}
+                {sel.collapsed ? t('Expand') : t('Collapse')}
               </button>
             )}
             {!isAction(sel) && sel.kind !== 'raw' && (
               <button
                 type="button"
                 className="btn ghost small"
-                title="Replace the block with its contents"
+                title={t('Replace the block with its contents')}
                 onClick={() => {
                   update((p) => {
                     const l = locate(p.rotation, sel.id);
@@ -402,7 +403,7 @@ export function RotationBuilder(props: Props) {
                   setSelected(null);
                 }}
               >
-                Unwrap
+                {t('Unwrap')}
               </button>
             )}
             <span className="grow" />
@@ -415,9 +416,9 @@ export function RotationBuilder(props: Props) {
                 if (loc) setCursor({ listId: loc.listId, afterId: loc.list[loc.index - 1]?.id ?? null });
               }}
             >
-              Delete
+              {t('Delete')}
             </button>
-            <button type="button" className="icon-btn" onClick={() => setSelected(null)} title="Close">✕</button>
+            <button type="button" className="icon-btn" onClick={() => setSelected(null)} title={t('Close')}>✕</button>
           </div>
         </div>
       )}
@@ -428,7 +429,7 @@ export function RotationBuilder(props: Props) {
 // ------------------------------------------------------------------ list / chips / blocks
 
 function Caret() {
-  return <span className="caret-mark" title="new actions are inserted here" />;
+  return <span className="caret-mark" title={t('new actions are inserted here')} />;
 }
 
 function ItemList({ items, listId, ctx, empty }: { items: RotItem[]; listId: ListId; ctx: Ctx; empty?: ReactNode }) {
@@ -522,7 +523,7 @@ function ActionChip({ a, prevChar, listId, idx, ctx }: { a: RotationAction; prev
         ctx.setSelected(ctx.selected === a.id ? null : a.id);
         ctx.setCursor({ listId, afterId: a.id });
       }}
-      title={[c ? c.name : '', info ? fmtS(info.dur) : '', a.cond ? `only if ${condToScript(a.cond)}` : '', ...(info?.warnings ?? [])].filter(Boolean).join('\n')}
+      title={[c ? c.name : '', info ? fmtS(info.dur) : '', a.cond ? t('only if {cond}', { cond: condToScript(a.cond) }) : '', ...(info?.warnings ?? [])].filter(Boolean).join('\n')}
     >
       {c && a.char !== prevChar && (
         <>
@@ -537,7 +538,7 @@ function ActionChip({ a, prevChar, listId, idx, ctx }: { a: RotationAction; prev
       <button
         type="button"
         className="chip-x"
-        title="Remove"
+        title={t('Remove')}
         onClick={(e) => {
           e.stopPropagation();
           ctx.update((p) => { removeItem(p.rotation, a.id); });
@@ -585,12 +586,12 @@ function BlockChip({ b, prevChar, listId, idx, ctx }: { b: Exclude<RotItem, Rota
         e.stopPropagation();
         toggleCollapse(ctx, b.id, listId);
       }}
-      title={`${b.kind === 'if' ? `if ${condToScript(b.cond)}\n` : ''}double-click to expand`}
+      title={`${b.kind === 'if' ? `if ${condToScript(b.cond)}\n` : ''}${t('double-click to expand')}`}
     >
       <button
         type="button"
         className="blk-toggle chip-expand"
-        title="Expand"
+        title={t('Expand')}
         onClick={(e) => {
           e.stopPropagation();
           toggleCollapse(ctx, b.id, listId);
@@ -608,7 +609,7 @@ function BlockChip({ b, prevChar, listId, idx, ctx }: { b: Exclude<RotItem, Rota
       <button
         type="button"
         className="chip-x"
-        title="Remove block"
+        title={t('Remove block')}
         onClick={(e) => {
           e.stopPropagation();
           ctx.update((p) => { removeItem(p.rotation, b.id); });
@@ -645,7 +646,7 @@ function BlockView({ b, listId, idx, ctx }: { b: Exclude<RotItem, RotationAction
           <button
             type="button"
             className="blk-toggle"
-            title={collapsed ? 'Expand (double-click the header works too)' : 'Collapse'}
+            title={collapsed ? t('Expand (double-click the header works too)') : t('Collapse')}
             onClick={(e) => {
               e.stopPropagation();
               toggle();
@@ -657,11 +658,11 @@ function BlockView({ b, listId, idx, ctx }: { b: Exclude<RotItem, RotationAction
         {b.kind === 'if' && (<><span className="blk-kw">if</span><code className="blk-cond">{condToScript(b.cond)}</code></>)}
         {b.kind === 'repeat' && (<><span className="blk-kw">repeat</span><b>{b.count}×</b></>)}
         {summary && b.kind !== 'raw' && <code className="blk-notation muted">{summary}</code>}
-        {b.kind === 'raw' && (<><span className="blk-kw">script</span><span className="muted small">raw gcsim script (the estimate skips it)</span></>)}
+        {b.kind === 'raw' && (<><span className="blk-kw">script</span><span className="muted small">{t('raw gcsim script (the estimate skips it)')}</span></>)}
         <button
           type="button"
           className="chip-x"
-          title="Remove block"
+          title={t('Remove block')}
           onClick={(e) => {
             e.stopPropagation();
             ctx.update((p) => { removeItem(p.rotation, b.id); });
@@ -676,8 +677,8 @@ function BlockView({ b, listId, idx, ctx }: { b: Exclude<RotItem, RotationAction
       ) : (
         childLists(b).map((l) => (
           <div key={l.id} className="blk-branch">
-            {b.kind === 'if' && <span className="blk-label">{l.label}</span>}
-            <ItemList items={l.items} listId={l.id} ctx={ctx} empty="click here, then add actions" />
+            {b.kind === 'if' && <span className="blk-label">{t(l.label)}</span>}
+            <ItemList items={l.items} listId={l.id} ctx={ctx} empty={t('click here, then add actions')} />
           </div>
         ))
       )}
@@ -712,12 +713,12 @@ function ActionEditor({
       <div className="row wrap">
         {a.action === 'wait' || a.action === 'delay' ? (
           <label className="field narrow">
-            <span>Frames</span>
+            <span>{t('Frames')}</span>
             <input type="number" min={0} value={a.frames ?? 0} onChange={(e) => onChange((x) => { x.frames = Math.max(0, +e.target.value || 0); })} />
           </label>
         ) : (
           <label className="field narrow">
-            <span>{a.action === 'attack' ? 'Hits (:N)' : 'Repeat (:N)'}</span>
+            <span>{a.action === 'attack' ? t('Hits (:N)') : t('Repeat (:N)')}</span>
             <input type="number" min={1} value={a.repeat} onChange={(e) => onChange((x) => { x.repeat = Math.max(1, +e.target.value || 1); })} />
           </label>
         )}
@@ -727,7 +728,7 @@ function ActionEditor({
             <input
               type="number"
               value={a.params[k] ?? ''}
-              placeholder="default"
+              placeholder={t('default')}
               onChange={(e) => onChange((x) => {
                 if (e.target.value === '') delete x.params[k];
                 else x.params[k] = +e.target.value;
@@ -751,9 +752,9 @@ function ActionEditor({
         ))}
         {a.char && (
           <label className="field narrow">
-            <span>Add param</span>
+            <span>{t('Add param')}</span>
             <span className="row tight">
-              <input value={newKey} placeholder="name" onChange={(e) => setNewKey(e.target.value.replace(/[^a-z0-9_%]/gi, ''))} />
+              <input value={newKey} placeholder={t('name')} onChange={(e) => setNewKey(e.target.value.replace(/[^a-z0-9_%]/gi, ''))} />
               <button type="button" className="btn small" disabled={!newKey} onClick={() => { onChange((x) => { x.params[newKey] = 1; }); setNewKey(''); }}>+</button>
             </span>
           </label>
@@ -764,7 +765,7 @@ function ActionEditor({
         <div className="ae-cond">
           <label className="check">
             <input type="checkbox" checked={!!a.cond} onChange={(e) => onChange((x) => { x.cond = e.target.checked ? defaultCond() : undefined; })} />
-            Only run if…
+            {t('Only run if…')}
           </label>
           {a.cond && <ConditionEditor cond={a.cond} team={team} statusHints={statusHints} defaultChar={a.char} onChange={(c) => onChange((x) => { x.cond = c; })} />}
         </div>
@@ -784,15 +785,15 @@ function BlockEditor({
   return (
     <>
       <div className="ae-head">
-        <strong>{b.kind === 'if' ? 'If block' : b.kind === 'repeat' ? 'Repeat block' : 'Script block'}</strong>
+        <strong>{b.kind === 'if' ? t('If block') : b.kind === 'repeat' ? t('Repeat block') : t('Script block')}</strong>
         <span className="muted small">
-          {b.kind === 'if' ? 'runs "then" when the condition holds, otherwise "else"' : b.kind === 'repeat' ? 'for N times { … }' : 'inserted verbatim into the config'}
+          {b.kind === 'if' ? t('runs "then" when the condition holds, otherwise "else"') : b.kind === 'repeat' ? t('for N times { … }') : t('inserted verbatim into the config')}
         </span>
       </div>
       {b.kind === 'if' && <ConditionEditor cond={b.cond} team={team} statusHints={statusHints} onChange={(c) => onChange((x) => { if (x.kind === 'if') x.cond = c; })} />}
       {b.kind === 'repeat' && (
         <label className="field narrow">
-          <span>Times</span>
+          <span>{t('Times')}</span>
           <input type="number" min={1} value={b.count} onChange={(e) => onChange((x) => { if (x.kind === 'repeat') x.count = Math.max(1, +e.target.value || 1); })} />
         </label>
       )}

@@ -19,3 +19,7 @@ userdata/
 *.log
 Thumbs.db
 .DS_Store
+
+# desktop app build output
+dist-electron/
+release/

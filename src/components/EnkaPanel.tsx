@@ -7,6 +7,7 @@ import type { Library } from '../lib/library';
 import type { CharBuild, Project } from '../lib/types';
 import { Icon } from './Combobox';
 import { BuildGear, BuildStats } from './LibraryPanel';
+import { t } from '../i18n';
 
 const UID_KEY = 'gcbuild.enka.uid';
 
@@ -39,7 +40,7 @@ export function EnkaPanel({ project, library, inventory, onUse, onClose }: Props
   const load = async () => {
     const u = uidText.trim();
     if (!/^\d{9,10}$/.test(u)) {
-      setErrors(['UID must be 9-10 digits']);
+      setErrors([t('UID must be 9-10 digits')]);
       return;
     }
     setBusy(true);
@@ -56,7 +57,7 @@ export function EnkaPanel({ project, library, inventory, onUse, onClose }: Props
       setData(d);
       setChars(r.chars);
       setErrors(r.errors);
-      if (!r.chars.length) setMsg('No characters in the showcase. Put them in the in-game Character Showcase with "Show Character Details" on.');
+      if (!r.chars.length) setMsg(t('No characters in the showcase. Put them in the in-game Character Showcase with "Show Character Details" on.'));
     } catch (e) {
       setData(null);
       setChars([]);
@@ -71,7 +72,7 @@ export function EnkaPanel({ project, library, inventory, onUse, onClose }: Props
       const name = `${getChar(c.build.key)?.name ?? c.build.key} · Enka${c.label === 'Showcase' ? '' : ` · ${c.label}`}`;
       library.save(c.build, name);
     }
-    setMsg(`Saved ${list.length} build(s) to My builds.`);
+    setMsg(t('Saved {n} build(s) to My builds.', { n: list.length }));
   };
 
   const addArtifacts = () => {
@@ -84,7 +85,7 @@ export function EnkaPanel({ project, library, inventory, onUse, onClose }: Props
     });
     const total = chars.reduce((n, c) => n + c.artifacts.length, 0);
     inventory.replace([...inventory.items, ...fresh]);
-    setMsg(`Added ${fresh.length} artifact(s) to the inventory${total - fresh.length ? `, ${total - fresh.length} were already there` : ''}.`);
+    setMsg(`${t('Added {n} artifact(s) to the inventory', { n: fresh.length })}${total - fresh.length ? `, ${t('{n} were already there', { n: total - fresh.length })}` : ''}.`);
   };
 
   return (
@@ -93,8 +94,8 @@ export function EnkaPanel({ project, library, inventory, onUse, onClose }: Props
         <h2>Enka.Network</h2>
         <span className="muted small">
           {data
-            ? <>{data.player.nickname ?? 'player'} · AR {data.player.level ?? '?'} · {chars.length} character(s){data.cached ? ' (cached)' : ''}</>
-            : 'Imports the in-game Character Showcase (and builds saved on a linked Enka profile).'}
+            ? <>{data.player.nickname ?? t('player')} · AR {data.player.level ?? '?'} · {t('{n} character(s)', { n: chars.length })}{data.cached ? ` ${t('(cached)')}` : ''}</>
+            : t('Imports the in-game Character Showcase (and builds saved on a linked Enka profile).')}
         </span>
         <span className="grow" />
         <input
@@ -105,8 +106,8 @@ export function EnkaPanel({ project, library, inventory, onUse, onClose }: Props
           onChange={(e) => setUid(e.target.value.replace(/\D/g, ''))}
           onKeyDown={(e) => e.key === 'Enter' && load()}
         />
-        <button type="button" className="btn primary small" disabled={busy} onClick={load}>{busy ? 'Loading…' : 'Load'}</button>
-        <button type="button" className="icon-btn" onClick={onClose} title="Close">✕</button>
+        <button type="button" className="btn primary small" disabled={busy} onClick={load}>{busy ? t('Loading…') : t('Load')}</button>
+        <button type="button" className="icon-btn" onClick={onClose} title={t('Close')}>✕</button>
       </div>
 
       {(errors.length > 0 || msg) && (
@@ -119,8 +120,8 @@ export function EnkaPanel({ project, library, inventory, onUse, onClose }: Props
       {chars.length > 0 && (
         <>
           <div className="row tight" style={{ marginBottom: 8 }}>
-            <button type="button" className="btn small" onClick={() => save(chars)}>Save all to My builds</button>
-            <button type="button" className="btn small" onClick={addArtifacts}>Add their artifacts to the inventory</button>
+            <button type="button" className="btn small" onClick={() => save(chars)}>{t('Save all to My builds')}</button>
+            <button type="button" className="btn small" onClick={addArtifacts}>{t('Add their artifacts to the inventory')}</button>
           </div>
           <div className="lib-grid">
             {chars.map((c, i) => {
@@ -132,7 +133,7 @@ export function EnkaPanel({ project, library, inventory, onUse, onClose }: Props
                     {ch && <Icon src={charIcon(ch.id)} rarity={ch.rarity} size={36} className="avatar" />}
                     <div className="lib-title">
                       <strong>{ch?.name ?? c.build.key}</strong>
-                      <span className="muted small">{c.label} · C{c.build.cons} · {c.build.level} · talents {c.build.talents.join('/')}</span>
+                      <span className="muted small">{c.label === 'Showcase' ? t('Showcase') : c.label} · C{c.build.cons} · {c.build.level} · {t('talents')} {c.build.talents.join('/')}</span>
                     </div>
                   </div>
                   <BuildGear build={c.build} />
@@ -142,15 +143,15 @@ export function EnkaPanel({ project, library, inventory, onUse, onClose }: Props
                       type="button"
                       className="btn primary small"
                       disabled={!inTeam && !project.team.some((b) => !b)}
-                      title={inTeam ? 'Replace this character in the team' : 'Put into a free team slot'}
+                      title={inTeam ? t('Replace this character in the team') : t('Put into a free team slot')}
                       onClick={() => {
                         onUse(structuredClone(c.build));
-                        setMsg(`${ch?.name ?? c.build.key} is now in the team.`);
+                        setMsg(t('{name} is now in the team.', { name: ch?.name ?? c.build.key }));
                       }}
                     >
-                      {inTeam ? 'Replace in team' : 'Add to team'}
+                      {inTeam ? t('Replace in team') : t('Add to team')}
                     </button>
-                    <button type="button" className="btn ghost small" onClick={() => save([c])}>Save to My builds</button>
+                    <button type="button" className="btn ghost small" onClick={() => save([c])}>{t('Save to My builds')}</button>
                   </div>
                 </div>
               );

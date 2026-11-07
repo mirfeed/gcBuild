@@ -5,6 +5,7 @@ import { Icon } from './Combobox';
 import type { TimelineResult, TLBar, TLStep } from '../lib/timeline';
 import { useTimelineNav } from '../lib/useTimelineNav';
 import type { Project } from '../lib/types';
+import { t } from '../i18n';
 
 interface Props {
   project: Project;
@@ -75,7 +76,7 @@ export function Timeline({ project, timeline, selected, onSelect, loops, setLoop
       out.push({ id: b!.key, label: c.name, icon: charIcon(c.id), color: ELEMENT_COLORS[c.element], rows });
     }
     const teamBars = timeline.bars.filter((x) => x.lane === 'team');
-    out.push({ id: 'team', label: 'Team / enemy', color: 'var(--accent)', rows: pack(teamBars).map((r) => ({ bars: r, thin: false })) });
+    out.push({ id: 'team', label: t('Team / enemy'), color: 'var(--accent)', rows: pack(teamBars).map((r) => ({ bars: r, thin: false })) });
     return out;
   }, [timeline, team, showCd]);
 
@@ -102,8 +103,8 @@ export function Timeline({ project, timeline, selected, onSelect, loops, setLoop
     return [
       `${c ? c.name + ' · ' : ''}${s.label}`,
       `${sec(s.start)}s → ${sec(s.end)}s (${s.end - s.start}f)`,
-      s.waited ? `waited ${sec(s.waited)}s before` : '',
-      s.generic ? 'approximate frames (not extracted from gcsim)' : '',
+      s.waited ? t('waited {s}s before', { s: sec(s.waited) }) : '',
+      s.generic ? t('approximate frames (not extracted from gcsim)') : '',
       ...s.warnings,
     ].filter(Boolean).join('\n');
   };
@@ -112,27 +113,27 @@ export function Timeline({ project, timeline, selected, onSelect, loops, setLoop
     <div className="timeline">
       <div className="tl-controls">
         <label className="field inline">
-          <span>Zoom</span>
+          <span>{t('Zoom')}</span>
           <input type="range" min={5} max={300} value={pxPerSec} onChange={(e) => setPx(+e.target.value)} />
         </label>
-        <button type="button" className="btn ghost small" onClick={() => fit(endFrame / 60 + 1)} title="Fit the whole timeline in view">Fit</button>
-        <span className="muted small">drag to pan · Ctrl+wheel to zoom</span>
-        <label className="field inline">
-          <span>Loops shown</span>
+        <button type="button" className="btn ghost small" onClick={() => fit(endFrame / 60 + 1)} title={t('Fit the whole timeline in view')}>{t('Fit')}</button>
+        <span className="muted small">{t('drag to pan · Ctrl+wheel to zoom')}</span>
+        <label className="field inline adv">
+          <span>{t('Loops shown')}</span>
           <select value={loops} onChange={(e) => setLoops(+e.target.value)}>
             {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n}</option>)}
           </select>
         </label>
-        <label className="check">
-          <input type="checkbox" checked={showCd} onChange={(e) => setShowCd(e.target.checked)} /> cooldowns
+        <label className="check adv">
+          <input type="checkbox" checked={showCd} onChange={(e) => setShowCd(e.target.checked)} /> {t('cooldowns')}
         </label>
         <span className="tl-stat">
-          {timeline.loopLength !== null && <>Loop length <b>{sec(timeline.loopLength)}s</b></>}
-          <span className="muted"> · total {sec(timeline.end)}s</span>
+          {timeline.loopLength !== null && <>{t('Loop length')} <b>{sec(timeline.loopLength)}s</b></>}
+          <span className="muted"> · {t('total')} {sec(timeline.end)}s</span>
         </span>
         <span className="legend small">
           {['field', 'buff', 'debuff', 'shield', 'state', 'summon', 'cd'].map((k) => (
-            <span key={k} className={`lg kind-${k}`}>{KIND_LABEL[k]}</span>
+            <span key={k} className={`lg kind-${k}`}>{t(KIND_LABEL[k])}</span>
           ))}
         </span>
       </div>
@@ -140,14 +141,14 @@ export function Timeline({ project, timeline, selected, onSelect, loops, setLoop
 
       <div className="tl-body">
         <div className="tl-labels">
-          <div className="tl-label ruler-label">time (s)</div>
-          <div className="tl-label actions-label">Actions</div>
+          <div className="tl-label ruler-label">{t('time (s)')}</div>
+          <div className="tl-label actions-label">{t('Actions')}</div>
           {lanes.map((l) => (
             <div key={l.id} className="tl-label lane-label" style={{ ['--el' as string]: l.color, height: laneHeight(l) }}>
               {l.icon && <Icon src={l.icon} size={28} className="avatar" />}
               <span className="lane-text">
                 <span className="lane-name">{l.label}</span>
-                {l.rows[0]?.thin && <span className="muted small lane-sub">E / Q cooldown</span>}
+                {l.rows[0]?.thin && <span className="muted small lane-sub">{t('E / Q cooldown')}</span>}
               </span>
             </div>
           ))}
@@ -179,7 +180,7 @@ export function Timeline({ project, timeline, selected, onSelect, loops, setLoop
                 return (
                   <span key={s.key}>
                     {s.waited > 0 && (
-                      <span className="wait-block" style={{ left: x(waitStart), width: Math.max(2, x(s.waited)) }} title={`waiting ${sec(s.waited)}s`} />
+                      <span className="wait-block" style={{ left: x(waitStart), width: Math.max(2, x(s.waited)) }} title={t('waiting {s}s', { s: sec(s.waited) })} />
                     )}
                     <span
                       className={`step ${s.char ? '' : 'idle'} ${selected === s.actionId ? 'sel' : ''} ${s.warnings.length ? 'has-warn' : ''} ${s.loop > 0 ? 'later-loop' : ''}`}
@@ -206,7 +207,7 @@ export function Timeline({ project, timeline, selected, onSelect, loops, setLoop
                         key={j}
                         className={`bar kind-${b.kind}`}
                         style={{ left: x(b.start), width: Math.max(2, x(b.end - b.start)), ['--el' as string]: charColor(b.char) }}
-                        title={`${b.label}\n${KIND_LABEL[b.kind]} · ${b.source}\n${sec(b.start)}s → ${sec(b.end)}s (${sec(b.end - b.start)}s)`}
+                        title={`${b.label}\n${t(KIND_LABEL[b.kind])} · ${b.source}\n${sec(b.start)}s → ${sec(b.end)}s (${sec(b.end - b.start)}s)`}
                       >
                         <span className="bar-label">{b.label}</span>
                       </span>
@@ -229,22 +230,22 @@ export function Timeline({ project, timeline, selected, onSelect, loops, setLoop
       <div className="tl-inspector small">
         {hoverInfo ? (
           <>
-            <b>{sec(hover!.frame)}s</b> (frame {hover!.frame})
+            <b>{sec(hover!.frame)}s</b> ({t('frame')} {hover!.frame})
             {hoverInfo.step && (
-              <span> · doing: <b style={{ color: charColor(hoverInfo.step.char) }}>{getChar(hoverInfo.step.char)?.name ?? ''} {hoverInfo.step.label}</b></span>
+              <span> · {t('doing:')} <b style={{ color: charColor(hoverInfo.step.char) }}>{getChar(hoverInfo.step.char)?.name ?? ''} {hoverInfo.step.label}</b></span>
             )}
             {hoverInfo.active.length > 0 ? (
               <div className="insp-list">
                 {[...hoverInfo.active].sort((p, q) => Number(p.kind === 'cd') - Number(q.kind === 'cd')).map((b, i) => (
                   <span key={i} className={`insp kind-${b.kind}`} style={{ ['--el' as string]: charColor(b.char) }}>
-                    <span className="insp-who">{getChar(b.char)?.name.split(' ')[0]}</span> {b.label} <span className="muted">{sec(b.end - hover!.frame)}s left</span>
+                    <span className="insp-who">{getChar(b.char)?.name.split(' ')[0]}</span> {b.label} <span className="muted">{t('{s}s left', { s: sec(b.end - hover!.frame) })}</span>
                   </span>
                 ))}
               </div>
-            ) : <span className="muted"> · nothing active</span>}
+            ) : <span className="muted"> · {t('nothing active')}</span>}
           </>
         ) : (
-          <span className="muted">Hover the timeline to see which buffs, fields and cooldowns are up at that moment. Click an action to edit it.</span>
+          <span className="muted">{t('Hover the timeline to see which buffs, fields and cooldowns are up at that moment. Click an action to edit it.')}</span>
         )}
       </div>
     </div>

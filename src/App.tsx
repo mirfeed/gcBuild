@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArtifactsPanel } from './components/Artifacts';
 import { CharCard } from './components/CharCard';
 import { ConfigPanel } from './components/ConfigPanel';
+import { Menu } from './components/Menu';
+import { HelpPanel, helpSeen, markHelpSeen } from './components/HelpPanel';
 import { LibraryPanel } from './components/LibraryPanel';
 import { EnkaPanel } from './components/EnkaPanel';
 import { TeamsPanel } from './components/TeamsPanel';
@@ -16,6 +18,8 @@ import { generateConfig } from './lib/config';
 import { importConfig } from './lib/importConfig';
 import { generateKqms } from './lib/kqms';
 import { openReport } from './lib/report';
+import { desktop } from './lib/desktop';
+import { checkForUpdatesNow, UpdateBanner, useUpdateStatus } from './components/UpdateBanner';
 import { useLibrary } from './lib/library';
 import { act, emptyProject, exampleProject, uid } from './lib/project';
 import { getList, locate, pruneChar, removeItem } from './lib/rotation';
@@ -23,6 +27,8 @@ import { parseSample, type SampleTimeline } from './lib/sample';
 import { useProject } from './lib/store';
 import { simulate } from './lib/timeline';
 import { SLOTS, type CharBuild, type Project } from './lib/types';
+import { setAdvanced, setBackgrounds, useAdvanced, useBackgrounds } from './lib/ui';
+import { LANGS, setLang, t, useLang } from './i18n';
 
 interface SimState {
   result: SimResult;
@@ -50,6 +56,14 @@ export default function App() {
   const [enkaOpen, setEnkaOpen] = useState(false);
   const inventory = useInventory();
   const fileInput = useRef<HTMLInputElement>(null);
+  const advanced = useAdvanced();
+  const backgrounds = useBackgrounds();
+  const update$ = useUpdateStatus();
+  const [helpOpen, setHelpOpen] = useState(() => !helpSeen());
+  useEffect(() => {
+    if (helpOpen) markHelpSeen();
+  }, [helpOpen]);
+  const lang = useLang();
 
   const timeline = useMemo(() => simulate(project, loops), [project, loops]);
   const config = useMemo(() => generateConfig(project), [project]);
@@ -120,10 +134,10 @@ export default function App() {
   const saveBuild = (b: CharBuild) => {
     const c = getChar(b.key);
     const w = weaponByKey.get(b.weapon.key);
-    const name = prompt('Name for this build', `${c?.name ?? b.key} · ${w?.name ?? b.weapon.key}`);
+    const name = prompt(t('Name for this build'), `${c?.name ?? b.key} · ${w?.name ?? b.weapon.key}`);
     if (name === null) return;
     library.save(b, name.trim() || `${c?.name ?? b.key}`);
-    setImportMsg([`Saved "${name.trim() || c?.name}" to My builds.`]);
+    setImportMsg([t('Saved "{name}" to My builds.', { name: name.trim() || c?.name || '' })]);
   };
 
   const loadProject = (p: Project) => {
@@ -138,12 +152,12 @@ export default function App() {
   const doImport = (text: string) => {
     try {
       const { project: p, warnings } = importConfig(text);
-      if (!p.team.some(Boolean)) throw new Error('no characters found');
+      if (!p.team.some(Boolean)) throw new Error(t('no characters found'));
       loadProject(p);
-      setImportMsg(warnings.length ? warnings : ['Imported.']);
+      setImportMsg(warnings.length ? warnings : [t('Imported.')]);
       setImportOpen(false);
     } catch (err) {
-      setImportMsg([`Could not import: ${(err as Error).message}`]);
+      setImportMsg([t('Could not import: {error}', { error: (err as Error).message })]);
     }
   };
 
@@ -233,11 +247,11 @@ export default function App() {
     if (/\.json$/i.test(file.name)) {
       try {
         const p = JSON.parse(text) as Project;
-        if (!Array.isArray(p.team) || !p.rotation) throw new Error('not a gcBuild project');
+        if (!Array.isArray(p.team) || !p.rotation) throw new Error(t('not a gcBuild project'));
         loadProject(p);
         setImportMsg([]);
       } catch (err) {
-        setImportMsg([`Could not open: ${(err as Error).message}`]);
+        setImportMsg([t('Could not open: {error}', { error: (err as Error).message })]);
       }
     } else {
       doImport(text);
@@ -245,44 +259,60 @@ export default function App() {
   };
 
   return (
-    <div className="app">
+    <div className={`app ${advanced ? 'advanced' : 'simple'} ${backgrounds ? 'fancy' : 'plain'}`}>
       <header className="app-head">
         <div className="brand">
           <span className="logo">⚔</span>
-          <div>
-            <h1>gcsim Config Builder</h1>
-            <span className="muted small">KQMS builds, click-to-build rotations, local gcsim</span>
-          </div>
+          <h1>gcBuild</h1>
         </div>
-        <input className="project-name" value={project.name} onChange={(e) => update((p) => { p.name = e.target.value; })} aria-label="Project name" />
+        <input className="project-name" value={project.name} onChange={(e) => update((p) => { p.name = e.target.value; })} aria-label={t('Project name')} />
         <div className="head-actions">
-          <button type="button" className="btn ghost" onClick={undo} disabled={!canUndo} title="Undo (Ctrl+Z)">↶</button>
-          <button type="button" className="btn ghost" onClick={redo} disabled={!canRedo} title="Redo (Ctrl+Y)">↷</button>
-          <button type="button" className="btn ghost" onClick={() => loadProject(emptyProject())}>New</button>
-          <button type="button" className="btn ghost" onClick={() => loadProject(exampleProject())}>Example</button>
-          <button type="button" className={`btn ${teamsOpen ? 'primary' : 'ghost'}`} onClick={() => setTeamsOpen((v) => !v)} title="Save / load teams in the project's teams/ folder">
-            Teams
+          <button type="button" className="icon-btn" onClick={undo} disabled={!canUndo} title={t('Undo (Ctrl+Z)')}>↶</button>
+          <button type="button" className="icon-btn" onClick={redo} disabled={!canRedo} title={t('Redo (Ctrl+Y)')}>↷</button>
+          <span className="head-sep" />
+          <button type="button" className={`btn ghost ${teamsOpen ? 'on' : ''}`} onClick={() => setTeamsOpen((v) => !v)} title={t("Save / load teams in the project's teams/ folder")}>
+            {t('Teams')}
           </button>
-          <button type="button" className={`btn ${enkaOpen ? 'primary' : 'ghost'}`} onClick={() => setEnkaOpen((v) => !v)} title="Import characters from Enka.Network by UID">
+          <button type="button" className={`btn ghost ${artsOpen ? 'on' : ''}`} onClick={() => setArtsOpen((v) => !v)}>
+            {t('Artifacts')}{inventory.items.length ? <span className="count">{inventory.items.length}</span> : null}
+          </button>
+          <button type="button" className={`btn ghost ${libOpen ? 'on' : ''}`} onClick={() => setLibOpen((v) => !v)}>
+            {t('My builds')}{library.items.length ? <span className="count">{library.items.length}</span> : null}
+          </button>
+          <button type="button" className={`btn ghost ${enkaOpen ? 'on' : ''}`} onClick={() => setEnkaOpen((v) => !v)} title={t('Import characters from Enka.Network by UID')}>
             Enka
           </button>
-          <button type="button" className={`btn ${artsOpen ? 'primary' : 'ghost'}`} onClick={() => setArtsOpen((v) => !v)}>
-            Artifacts{inventory.items.length ? ` (${inventory.items.length})` : ''}
-          </button>
-          <button type="button" className={`btn ${libOpen ? 'primary' : 'ghost'}`} onClick={() => setLibOpen((v) => !v)}>
-            My builds{library.items.length ? ` (${library.items.length})` : ''}
-          </button>
-          <button type="button" className="btn ghost" onClick={() => { setImportOpen((v) => !v); setImportMsg([]); }}>Import config</button>
-          <button type="button" className="btn ghost" onClick={exportJson}>Export</button>
-          <button type="button" className="btn ghost" onClick={() => fileInput.current?.click()} title="Open a .gcbuild.json project or a gcsim config .txt">Open</button>
-          <button
-            type="button"
-            className="btn ghost"
-            onClick={() => openReport(`Bug: `, { config })}
-            title="Report a problem on GitHub: opens a new issue with versions and the current config filled in"
-          >
-            Report a bug
-          </button>
+          <Menu
+            label="⋯"
+            title={t('More')}
+            items={[
+              { label: t('New team'), onClick: () => loadProject(emptyProject()) },
+              { label: t('Example team'), onClick: () => loadProject(exampleProject()) },
+              { label: t('Import gcsim config'), onClick: () => { setImportOpen(true); setImportMsg([]); } },
+              { label: t('Open file…'), onClick: () => fileInput.current?.click(), title: t('Open a .gcbuild.json project or a gcsim config .txt') },
+              { label: t('Export project'), onClick: exportJson },
+              { label: backgrounds ? t('Backgrounds: on') : t('Backgrounds: off'), onClick: () => setBackgrounds(!backgrounds) },
+              ...(desktop
+                ? [
+                  { label: t('Import from old folder…'), onClick: () => void desktop!.importOld(), title: t('Copy artifacts, My builds, teams and gcsim from a gcBuild folder used with start.bat') },
+                  { label: t('Open data folder'), onClick: () => void desktop!.openDataFolder() },
+                  { label: t('Check for updates'), onClick: checkForUpdatesNow, disabled: update$.state === 'dev' || update$.state === 'downloading' || update$.state === 'ready' },
+                ]
+                : []),
+              { label: t('Report a bug'), onClick: () => openReport('Bug: ', { config }), title: t('Report a problem on GitHub: opens a new issue with versions and the current config filled in') },
+            ]}
+          />
+          <button type="button" className={`btn ghost help-btn ${helpOpen ? 'on' : ''}`} onClick={() => setHelpOpen((v) => !v)} title={t('How to use')}>?</button>
+          <span className="head-sep" />
+          <span className="seg lang-switch" title={t('Language')}>
+            {LANGS.map((l) => (
+              <button key={l.id} type="button" className={lang === l.id ? 'on' : ''} onClick={() => setLang(l.id)}>{l.label}</button>
+            ))}
+          </span>
+          <label className="switch" title={t('Show every setting: KQMS details, substat rolls, conditions help, raw config…')}>
+            <input type="checkbox" checked={advanced} onChange={(e) => setAdvanced(e.target.checked)} />
+            <span>{t('Advanced')}</span>
+          </label>
           <input
             ref={fileInput}
             type="file"
@@ -297,6 +327,8 @@ export default function App() {
         </div>
       </header>
 
+      <UpdateBanner status={update$} />
+      {helpOpen && <HelpPanel onClose={() => setHelpOpen(false)} />}
       {importOpen && <ImportBox onImport={doImport} onClose={() => setImportOpen(false)} />}
       {teamsOpen && <TeamsPanel project={project} onLoad={loadProject} onClose={() => setTeamsOpen(false)} />}
       {enkaOpen && <EnkaPanel project={project} library={library} inventory={inventory} onUse={applyBuild} onClose={() => setEnkaOpen(false)} />}
@@ -312,18 +344,18 @@ export default function App() {
       <section className="panel">
         <div className="panel-head">
           <button type="button" className="collapse" onClick={() => setTeamOpen((v) => !v)} aria-expanded={teamOpen}>
-            {teamOpen ? '▾' : '▸'} <h2>Team</h2>
+            <span className="caret">{teamOpen ? '▾' : '▸'}</span> <h2>{t('Team')}</h2>
           </button>
-          <span className="muted small">Level 90/90, talents 9/9/9, 5★ C0 / 4★ C6, 5★ weapons R1 / 4★ R5 by default</span>
+          <span className="muted small adv">{t('Level 90/90, talents 9/9/9, 5★ C0 / 4★ C6, 5★ weapons R1 / 4★ R5 by default')}</span>
           <span className="grow" />
           <button
             type="button"
             className="btn primary"
             disabled={!project.team.some((b) => b && b.statsMode !== 'custom')}
             onClick={() => update((p) => p.team.forEach((_, i) => kqmsSlot(p, i)))}
-            title="Allocate KQMS substats for every KQMS character"
+            title={t('Allocate KQMS substats for every KQMS character')}
           >
-            Generate KQMS for team
+            {t('Generate KQMS for team')}
           </button>
         </div>
         {teamOpen && (
@@ -350,11 +382,12 @@ export default function App() {
 
       <section className="panel">
         <div className="panel-head">
-          <h2>Rotation</h2>
-          <span className="muted small">
-            Click actions to add them at the cursor (▏). Keys: <kbd>1</kbd>-<kbd>4</kbd> pick a character, <kbd>E</kbd> skill, <kbd>⇧E</kbd> hold, <kbd>Q</kbd> burst,
-            {' '}<kbd>A</kbd> attack, <kbd>C</kbd> charge/aim, <kbd>D</kbd> dash, <kbd>J</kbd> jump, <kbd>W</kbd> wait, <kbd>⌫</kbd> delete, <kbd>←</kbd><kbd>→</kbd> move cursor, <kbd>Ctrl+Z</kbd> undo
+          <h2>{t('Rotation')}</h2>
+          <span className="muted small adv">
+            {t('Click actions to add them at the cursor (▏). Keys:')} <kbd>1</kbd>-<kbd>4</kbd> {t('pick a character')}, <kbd>E</kbd> {t('skill')}, <kbd>⇧E</kbd> {t('hold')}, <kbd>Q</kbd> {t('burst')},
+            {' '}<kbd>A</kbd> {t('attack')}, <kbd>C</kbd> {t('charge/aim')}, <kbd>D</kbd> {t('dash')}, <kbd>J</kbd> {t('jump')}, <kbd>W</kbd> {t('wait')}, <kbd>⌫</kbd> {t('delete')}, <kbd>←</kbd><kbd>→</kbd> {t('move cursor')}, <kbd>Ctrl+Z</kbd> {t('undo')}
           </span>
+          <span className="muted small simple-only">{t('Click the skill buttons or type the rotation as text.')}</span>
         </div>
         <RotationBuilder
           project={project}
@@ -374,8 +407,8 @@ export default function App() {
 
       <section className="panel">
         <div className="panel-head">
-          <h2>Simulate</h2>
-          <span className="muted small">Runs the config with the local gcsim CLI. <kbd>Ctrl+Enter</kbd> runs the sim.</span>
+          <h2>{t('Simulate')}</h2>
+          <span className="muted small adv">{t('Runs the config with the local gcsim CLI.')} <kbd>Ctrl+Enter</kbd> {t('runs the sim.')}</span>
         </div>
         <SimPanel
           project={project}
@@ -394,17 +427,17 @@ export default function App() {
 
       <section className="panel">
         <div className="panel-head">
-          <h2>Timeline</h2>
+          <h2>{t('Timeline')}</h2>
           <span className="seg">
-            <button type="button" className={tlView === 'estimate' ? 'on' : ''} onClick={() => setTlView('estimate')}>Estimate</button>
+            <button type="button" className={tlView === 'estimate' ? 'on' : ''} onClick={() => setTlView('estimate')}>{t('Estimate')}</button>
             <button type="button" className={tlView === 'sim' ? 'on' : ''} onClick={() => setTlView('sim')} disabled={!sim}>
-              gcsim sample{sim && sim.config !== config ? ' (outdated)' : ''}
+              {t('gcsim sample')}{sim && sim.config !== config ? ` (${t('outdated')})` : ''}
             </button>
           </span>
-          <span className="muted small">
+          <span className="muted small adv">
             {tlView === 'estimate'
-              ? 'Planned from gcsim frame data and cooldowns while you build. No hitlag, energy or HP: run the sim for the real thing.'
-              : 'One real gcsim iteration: exact action timing with hitlag, statuses, energy, HP, damage and reactions.'}
+              ? t('Planned from gcsim frame data and cooldowns while you build. No hitlag, energy or HP: run the sim for the real thing.')
+              : t('One real gcsim iteration: exact action timing with hitlag, statuses, energy, HP, damage and reactions.')}
           </span>
         </div>
         {tlView === 'sim' && sim ? (
@@ -427,13 +460,14 @@ export default function App() {
 
       <section className="panel">
         <div className="panel-head">
-          <h2>gcsim config</h2>
+          <h2>{t('Sim settings')}</h2>
+          <span className="muted small simple-only">{t('Target, energy and duration. Turn on Advanced for every option and the raw gcsim config.')}</span>
         </div>
         <ConfigPanel project={project} update={update} />
       </section>
 
-      <footer className="muted small foot">
-        {characters.length} characters. Data, frames and icons come from gcsim. Effect durations in the estimate are hand-curated approximations.
+      <footer className="muted small foot adv">
+        {t('{n} characters. Data, frames and icons come from gcsim. Effect durations in the estimate are hand-curated approximations.', { n: characters.length })}
       </footer>
     </div>
   );
@@ -452,16 +486,16 @@ function ImportBox({ onImport, onClose }: { onImport: (text: string) => void; on
       }}
     >
       <div className="panel-head">
-        <h2>Import gcsim config</h2>
+        <h2>{t('Import gcsim config')}</h2>
         <span className="muted small">
-          Paste a config (or drop a .txt). Characters keep their exact stats; rotation lines, if/else and counted for-loops become editable blocks, anything else is kept as script.
+          {t('Paste a config (or drop a .txt). Characters keep their exact stats; rotation lines, if/else and counted for-loops become editable blocks, anything else is kept as script.')}
         </span>
         <span className="grow" />
-        <button type="button" className="icon-btn" onClick={onClose} title="Close">✕</button>
+        <button type="button" className="icon-btn" onClick={onClose} title={t('Close')}>✕</button>
       </div>
       <textarea className="import-text" spellCheck={false} value={text} onChange={(e) => setText(e.target.value)} placeholder={'hutao char lvl=90/90 cons=0 talent=9,9,9;\nhutao add weapon="staffofhoma" refine=1 lvl=90/90;\n…'} />
       <div className="row">
-        <button type="button" className="btn primary" disabled={!text.trim()} onClick={() => onImport(text)}>Import (replaces the current project)</button>
+        <button type="button" className="btn primary" disabled={!text.trim()} onClick={() => onImport(text)}>{t('Import (replaces the current project)')}</button>
       </div>
     </section>
   );

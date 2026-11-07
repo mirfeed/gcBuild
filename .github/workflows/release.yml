@@ -1,0 +1,39 @@
+# Builds the Windows installer and uploads it to a DRAFT GitHub release when a version tag is pushed:
+#   npm version 0.2.0        (bumps package.json, commits, tags v0.2.0)
+#   git push --follow-tags
+# Then open Releases on GitHub, write what changed and press "Publish": installed apps update themselves.
+name: Release (Windows app)
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Tag matches package.json version
+        shell: bash
+        run: |
+          v=$(node -p "require('./package.json').version")
+          if [ "v$v" != "$GITHUB_REF_NAME" ]; then echo "tag $GITHUB_REF_NAME does not match package.json version v$v"; exit 1; fi
+
+      - run: npm ci
+
+      - run: npm run typecheck
+
+      - name: Build installer and upload to a draft release
+        run: npm run release:win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'

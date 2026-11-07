@@ -6,6 +6,7 @@ import { buildSummary } from '../lib/kqms';
 import type { Library, SavedBuild } from '../lib/library';
 import type { CharBuild, Project } from '../lib/types';
 import { Icon } from './Combobox';
+import { t } from '../i18n';
 
 interface Props {
   library: Library;
@@ -42,10 +43,10 @@ export function BuildGear({ build }: { build: CharBuild }) {
       {buildSets.map((s) => (
         <span key={s.key} className="gear-item" title={setByKey.get(s.key)?.name ?? s.key}>
           <Icon src={setIcon(s.key)} size={22} />
-          {s.count}pc
+          {t('{n}pc', { n: s.count })}
         </span>
       ))}
-      <span className="muted">{build.statsMode === 'artifacts' ? 'artifacts' : build.statsMode === 'custom' ? 'custom stats' : 'KQMS'}</span>
+      <span className="muted">{build.statsMode === 'artifacts' ? t('artifacts') : build.statsMode === 'custom' ? t('custom stats') : 'KQMS'}</span>
     </div>
   );
 }
@@ -67,30 +68,30 @@ export function LibraryPanel({ library, project, onUse, onClose }: Props) {
   return (
     <section className="panel library">
       <div className="panel-head">
-        <h2>My builds</h2>
-        <span className="muted small">{library.items.length} saved in this browser. Save a team card with 💾; load it back from the card or from here.</span>
+        <h2>{t('My builds')}</h2>
+        <span className="muted small">{t('{n} saved. Save a team card with 💾; load it back from the card or from here.', { n: library.items.length })}</span>
         <span className="grow" />
-        <input className="lib-search" placeholder="search…" value={query} onChange={(e) => setQuery(e.target.value)} />
+        <input className="lib-search" placeholder={t('search…')} value={query} onChange={(e) => setQuery(e.target.value)} />
         {library.items.length > 0 && (
           <button
             type="button"
             className="btn ghost small danger"
-            onClick={() => confirm(`Delete all ${library.items.length} saved builds?`) && library.removeAll()}
+            onClick={() => confirm(t('Delete all {n} saved builds?', { n: library.items.length })) && library.removeAll()}
           >
-            Delete all
+            {t('Delete all')}
           </button>
         )}
-        <button type="button" className="icon-btn" onClick={onClose} title="Close">✕</button>
+        <button type="button" className="icon-btn" onClick={onClose} title={t('Close')}>✕</button>
       </div>
 
       {library.backup.length > 0 && (
         <div className="hint warn small lib-result">
-          <div>This browser had a different build list ({library.backup.length} builds) than the userdata folder ({library.items.length}).</div>
+          <div>{t('This browser had a different build list ({a} builds) than the userdata folder ({b}).', { a: library.backup.length, b: library.items.length })}</div>
           <span className="row tight">
-            <button type="button" className="btn primary small" onClick={() => confirm(`Replace the current ${library.items.length} builds with the ${library.backup.length} from the browser backup?`) && library.restoreBackup()}>
-              Restore {library.backup.length} from browser backup
+            <button type="button" className="btn primary small" onClick={() => confirm(t('Replace the current {a} builds with the {b} from the browser backup?', { a: library.items.length, b: library.backup.length })) && library.restoreBackup()}>
+              {t('Restore {n} from browser backup', { n: library.backup.length })}
             </button>
-            <button type="button" className="btn ghost small" onClick={library.dropBackup}>Dismiss</button>
+            <button type="button" className="btn ghost small" onClick={library.dropBackup}>{t('Dismiss')}</button>
           </span>
         </div>
       )}
@@ -111,7 +112,7 @@ export function LibraryPanel({ library, project, onUse, onClose }: Props) {
           ))}
         </div>
       ) : (
-        <div className="muted small">No saved builds yet.</div>
+        <div className="muted small">{t('No saved builds yet.')}</div>
       )}
     </section>
   );
@@ -145,7 +146,7 @@ function LibCard({
               onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
             />
           ) : (
-            <span className="muted small" onDoubleClick={() => setEditing(true)} title="double-click to rename">
+            <span className="muted small" onDoubleClick={() => setEditing(true)} title={t('double-click to rename')}>
               {item.name} · C{item.build.cons} · {item.build.level} · {new Date(item.savedAt).toLocaleDateString()}
             </span>
           )}
@@ -155,18 +156,18 @@ function LibCard({
       <BuildStats build={item.build} />
       <div className="lib-actions">
         {inTeam ? (
-          <button type="button" className="btn primary small" onClick={() => onUse()}>Use in team</button>
+          <button type="button" className="btn primary small" onClick={() => onUse()}>{t('Use in team')}</button>
         ) : (
-          <select value="" onChange={(e) => e.target.value !== '' && onUse(+e.target.value)} title="Put this build into a team slot">
-            <option value="">Use in slot…</option>
+          <select value="" onChange={(e) => e.target.value !== '' && onUse(+e.target.value)} title={t('Put this build into a team slot')}>
+            <option value="">{t('Use in slot…')}</option>
             {project.team.map((b, i) => (
-              <option key={i} value={i}>slot {i + 1}{b ? ` (replace ${getChar(b.key)?.name ?? b.key})` : ' (empty)'}</option>
+              <option key={i} value={i}>{t('slot {n}', { n: i + 1 })} {b ? t('(replace {name})', { name: getChar(b.key)?.name ?? b.key }) : t('(empty)')}</option>
             ))}
           </select>
         )}
-        <button type="button" className="btn ghost small" onClick={() => setEditing(true)}>Rename</button>
+        <button type="button" className="btn ghost small" onClick={() => setEditing(true)}>{t('Rename')}</button>
         <span className="grow" />
-        <button type="button" className="btn ghost small danger" onClick={() => confirm(`Delete "${item.name}"?`) && onDelete()}>Delete</button>
+        <button type="button" className="btn ghost small danger" onClick={() => confirm(t('Delete "{name}"?', { name: item.name })) && onDelete()}>{t('Delete')}</button>
       </div>
     </div>
   );

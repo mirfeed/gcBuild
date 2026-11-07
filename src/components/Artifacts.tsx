@@ -4,6 +4,7 @@ import { setIcon } from '../data/icons';
 import { critValue, parseGoodArtifacts, subValue, type Inventory } from '../lib/artifacts';
 import { SLOTS, type Artifact, type Slot, type Stat } from '../lib/types';
 import { Icon } from './Combobox';
+import { t } from '../i18n';
 
 export const SHORT: Record<string, string> = {
   hp: 'HP', 'hp%': 'HP%', atk: 'ATK', 'atk%': 'ATK%', def: 'DEF', 'def%': 'DEF%', em: 'EM', er: 'ER', cr: 'CR', cd: 'CD',
@@ -26,14 +27,14 @@ export function ArtifactCard({ a, badge, onClick, selected }: { a: Artifact; bad
   const set = setByKey.get(a.set);
   const loc = a.location ? getChar(a.location)?.name ?? a.location : '';
   return (
-    <button type="button" className={`art-card r${a.rarity} ${selected ? 'sel' : ''}`} onClick={onClick} disabled={!onClick} title={set?.name ?? 'set not implemented in gcsim (no set bonus)'}>
+    <button type="button" className={`art-card r${a.rarity} ${selected ? 'sel' : ''}`} onClick={onClick} disabled={!onClick} title={set?.name ?? t('set not implemented in gcsim (no set bonus)')}>
       <span className="art-top">
         <Icon src={setIcon(a.set)} size={34} />
         <span className="art-main">
           <b>{SHORT[a.main]} {fmtStat(a.main, a.mainValue)}</b>
-          <span className="muted">{SLOT_LABEL[a.slot]} +{a.level} · {'★'.repeat(a.rarity)}</span>
+          <span className="muted">{t(SLOT_LABEL[a.slot])} +{a.level} · {'★'.repeat(a.rarity)}</span>
         </span>
-        <span className="art-cv" title="crit value (2×CR + CD)">{critValue(a)}</span>
+        <span className="art-cv" title={t('crit value (2×CR + CD)')}>{critValue(a)}</span>
       </span>
       <span className="art-subs">
         {a.subs.map((s) => (
@@ -42,7 +43,7 @@ export function ArtifactCard({ a, badge, onClick, selected }: { a: Artifact; bad
       </span>
       {(loc || badge) && (
         <span className="art-tags">
-          {loc && <span className="muted">in game: {loc}</span>}
+          {loc && <span className="muted">{t('in game: {name}', { name: loc })}</span>}
           {badge && <span className="warn">{badge}</span>}
         </span>
       )}
@@ -83,24 +84,24 @@ export function ArtifactBrowser({ items, slot, selectedId, usedBy, onPick }: Bro
       <div className="row tight art-filters">
         {!slot && (
           <select value={slotF} onChange={(e) => setSlotF(e.target.value as Slot | '')}>
-            <option value="">all slots</option>
-            {SLOTS.map((s) => <option key={s} value={s}>{SLOT_LABEL[s]}</option>)}
+            <option value="">{t('all slots')}</option>
+            {SLOTS.map((s) => <option key={s} value={s}>{t(SLOT_LABEL[s])}</option>)}
           </select>
         )}
         <select value={setF} onChange={(e) => setSetF(e.target.value)}>
-          <option value="">all sets ({setsHere.length})</option>
-          {setsHere.map((s) => <option key={s} value={s}>{setByKey.get(s)?.name ?? (s === '-' ? 'other (not in gcsim)' : s)}</option>)}
+          <option value="">{t('all sets ({n})', { n: setsHere.length })}</option>
+          {setsHere.map((s) => <option key={s} value={s}>{setByKey.get(s)?.name ?? (s === '-' ? t('other (not in gcsim)') : s)}</option>)}
         </select>
         <select value={mainF} onChange={(e) => setMainF(e.target.value)}>
-          <option value="">any main stat</option>
+          <option value="">{t('any main stat')}</option>
           {mainsHere.map((m) => <option key={m} value={m}>{SHORT[m]}</option>)}
         </select>
-        <label className="small muted">sort
+        <label className="small muted">{t('sort')}
           <select value={sort} onChange={(e) => setSort(e.target.value as SortKey)}>
-            {SORTS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
+            {SORTS.map((s) => <option key={s.key} value={s.key}>{t(s.label)}</option>)}
           </select>
         </label>
-        <span className="muted small">{list.length} artifact(s)</span>
+        <span className="muted small">{t('Artifacts: {n}', { n: list.length })}</span>
       </div>
       <div className="art-grid">
         {list.slice(0, limit).map((a) => (
@@ -114,7 +115,7 @@ export function ArtifactBrowser({ items, slot, selectedId, usedBy, onPick }: Bro
         ))}
       </div>
       {list.length > limit && (
-        <button type="button" className="btn ghost small" onClick={() => setLimit((n) => n + 120)}>show more ({list.length - limit} left)</button>
+        <button type="button" className="btn ghost small" onClick={() => setLimit((n) => n + 120)}>{t('show more ({n} left)', { n: list.length - limit })}</button>
       )}
     </div>
   );
@@ -141,16 +142,16 @@ export function ArtifactPicker({
     <div className="modal-back" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal" role="dialog" aria-label={`Pick ${slot}`}>
         <div className="panel-head">
-          <h2>Pick {SLOT_LABEL[slot].toLowerCase()}</h2>
-          {current && <span className="muted small">current: {SHORT[current.main]} · CV {critValue(current)}</span>}
+          <h2>{t('Pick: {slot}', { slot: t(SLOT_LABEL[slot]) })}</h2>
+          {current && <span className="muted small">{t('current:')} {SHORT[current.main]} · CV {critValue(current)}</span>}
           <span className="grow" />
-          {current && <button type="button" className="btn ghost small" onClick={onClear}>Unequip</button>}
-          <button type="button" className="icon-btn" onClick={onClose} title="Close">✕</button>
+          {current && <button type="button" className="btn ghost small" onClick={onClear}>{t('Unequip')}</button>}
+          <button type="button" className="icon-btn" onClick={onClose} title={t('Close')}>✕</button>
         </div>
         {inventory.some((a) => a.slot === slot) ? (
           <ArtifactBrowser items={inventory} slot={slot} selectedId={current?.id} usedBy={usedBy} onPick={onPick} />
         ) : (
-          <div className="muted">No {slot} artifacts in the inventory. Import a GOOD export from the Artifacts panel first.</div>
+          <div className="muted">{t('No {slot} artifacts in the inventory. Import a GOOD export from the Artifacts panel first.', { slot: t(SLOT_LABEL[slot]) })}</div>
         )}
       </div>
     </div>
@@ -166,13 +167,13 @@ export function ArtifactsPanel({ inventory, usedBy, onClose }: { inventory: Inve
   const doImport = (raw: string) => {
     try {
       const { artifacts, warnings, source } = parseGoodArtifacts(raw);
-      if (!artifacts.length) throw new Error('no artifacts found');
+      if (!artifacts.length) throw new Error(t('no artifacts found'));
       inventory.replace(artifacts);
-      setMsg({ text: `Imported ${artifacts.length} artifacts from ${source}. Build characters by switching a team card to "Artifacts".`, warnings });
+      setMsg({ text: t('Imported {n} artifacts from {source}. Build characters by switching a team card to "Artifacts".', { n: artifacts.length, source }), warnings });
       setPaste(false);
       setText('');
     } catch (e) {
-      setMsg({ text: `Could not import: ${(e as Error).message}`, warnings: [] });
+      setMsg({ text: t('Could not import: {error}', { error: (e as Error).message }), warnings: [] });
     }
   };
 
@@ -181,19 +182,19 @@ export function ArtifactsPanel({ inventory, usedBy, onClose }: { inventory: Inve
   return (
     <section className="panel library">
       <div className="panel-head">
-        <h2>Artifacts</h2>
+        <h2>{t('Artifacts')}</h2>
         <span className="muted small">
-          {inventory.items.length ? bySlot.map(([s, n]) => `${n} ${s}`).join(' · ') : 'Import a GOOD export (Genshin Optimizer, Inventory Kamera, Irminsul…). Only artifacts are read.'}
+          {inventory.items.length ? bySlot.map(([s, n]) => `${n} ${t(SLOT_LABEL[s])}`).join(' · ') : t('Import a GOOD export (Genshin Optimizer, Inventory Kamera, Irminsul…). Only artifacts are read.')}
         </span>
         <span className="grow" />
-        <button type="button" className="btn primary small" onClick={() => file.current?.click()}>Import GOOD file</button>
-        <button type="button" className="btn ghost small" onClick={() => setPaste((v) => !v)}>Paste GOOD</button>
+        <button type="button" className="btn primary small" onClick={() => file.current?.click()}>{t('Import GOOD file')}</button>
+        <button type="button" className="btn ghost small" onClick={() => setPaste((v) => !v)}>{t('Paste GOOD')}</button>
         {inventory.items.length > 0 && (
-          <button type="button" className="btn ghost small danger" onClick={() => confirm('Remove all imported artifacts? Builds keep their own copies.') && inventory.clear()}>
-            Clear
+          <button type="button" className="btn ghost small danger" onClick={() => confirm(t('Remove all imported artifacts? Builds keep their own copies.')) && inventory.clear()}>
+            {t('Clear')}
           </button>
         )}
-        <button type="button" className="icon-btn" onClick={onClose} title="Close">✕</button>
+        <button type="button" className="icon-btn" onClick={onClose} title={t('Close')}>✕</button>
         <input
           ref={file}
           type="file"
@@ -209,17 +210,17 @@ export function ArtifactsPanel({ inventory, usedBy, onClose }: { inventory: Inve
       {paste && (
         <div className="lib-paste">
           <textarea className="import-text" spellCheck={false} placeholder='{"format":"GOOD","version":2,"artifacts":[…]}' value={text} onChange={(e) => setText(e.target.value)} />
-          <button type="button" className="btn primary small" disabled={!text.trim()} onClick={() => doImport(text)}>Import</button>
+          <button type="button" className="btn primary small" disabled={!text.trim()} onClick={() => doImport(text)}>{t('Import')}</button>
         </div>
       )}
       {inventory.backup.length > 0 && (
         <div className="hint warn small lib-result">
-          <div>This browser had a different artifact list ({inventory.backup.length} artifacts) than the userdata folder ({inventory.items.length}).</div>
+          <div>{t('This browser had a different artifact list ({a} artifacts) than the userdata folder ({b}).', { a: inventory.backup.length, b: inventory.items.length })}</div>
           <span className="row tight">
-            <button type="button" className="btn primary small" onClick={() => confirm(`Replace the current ${inventory.items.length} artifacts with the ${inventory.backup.length} from the browser backup?`) && inventory.restoreBackup()}>
-              Restore {inventory.backup.length} from browser backup
+            <button type="button" className="btn primary small" onClick={() => confirm(t('Replace the current {a} artifacts with the {b} from the browser backup?', { a: inventory.items.length, b: inventory.backup.length })) && inventory.restoreBackup()}>
+              {t('Restore {n} from browser backup', { n: inventory.backup.length })}
             </button>
-            <button type="button" className="btn ghost small" onClick={inventory.dropBackup}>Dismiss</button>
+            <button type="button" className="btn ghost small" onClick={inventory.dropBackup}>{t('Dismiss')}</button>
           </span>
         </div>
       )}

@@ -4,6 +4,7 @@
  * people without a GitHub account.
  */
 import { gcsim } from './api';
+import { desktop } from './desktop';
 
 export const REPO = 'mirfeed/gcBuild';
 export const ISSUES_URL = `https://github.com/${REPO}/issues`;
@@ -28,7 +29,7 @@ export async function environment(): Promise<string> {
   } catch {
     sim = 'bridge not reachable';
   }
-  return [`- gcBuild: ${__APP_VERSION__}`, `- gcsim: ${sim}`, `- Browser: ${navigator.userAgent}`, `- Page: ${location.host}`].join('\n');
+  return [`- gcBuild: ${__APP_VERSION__}${desktop ? ' (desktop app)' : ''}`, `- gcsim: ${sim}`, `- Browser: ${navigator.userAgent}`, `- Page: ${location.host}`].join('\n');
 }
 
 const fence = (lang: string, text: string) => `\`\`\`${lang}\n${text.trim()}\n\`\`\``;
@@ -71,6 +72,11 @@ export function issueUrl(title: string, r: ReportInput, env: string): string {
 
 /** Opens a prefilled GitHub issue in a new tab. */
 export async function openReport(title: string, r: ReportInput): Promise<void> {
+  // desktop app: links go to the system browser, no popup blocker to dodge
+  if (desktop) {
+    window.open(issueUrl(title, r, await environment()), '_blank');
+    return;
+  }
   // open the tab right away (popup blockers allow it only inside the click), fill the address after
   const tab = window.open('about:blank', '_blank');
   const url = issueUrl(title, r, await environment());

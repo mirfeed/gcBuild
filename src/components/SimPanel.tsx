@@ -6,6 +6,7 @@ import { applyErFix, applyOptimizedSubs, erVerdicts, teamKeyOf } from '../lib/si
 import type { Updater } from '../lib/store';
 import type { Project } from '../lib/types';
 import { Icon } from './Combobox';
+import { t } from '../i18n';
 
 interface Props {
   project: Project;
@@ -54,13 +55,13 @@ export function SimPanel({ project, update, config, result, resultConfig, onResu
     }
   };
 
-  const run = () => task('Running sim…', async () => onResult(await gcsim.run(config), config));
-  const checkEr = () => task('Checking energy (24 runs, bursts on cooldown)…', async () => setEr(await gcsim.erCalc(config)));
-  const optimize = () => task('gcsim optimizer running…', async () => {
+  const run = () => task(t('Running sim…'), async () => onResult(await gcsim.run(config), config));
+  const checkEr = () => task(t('Checking energy (24 runs, bursts on cooldown)…'), async () => setEr(await gcsim.erCalc(config)));
+  const optimize = () => task(t('gcsim optimizer running…'), async () => {
     const out = await gcsim.optimize(config);
     let msgs: string[] = [];
     update((p) => { msgs = applyOptimizedSubs(p, out.config); });
-    setNotes(msgs.length ? ['Applied gcsim-optimized substats:', ...msgs] : ['The optimizer returned no substat lines for KQMS characters.']);
+    setNotes(msgs.length ? [t('Applied gcsim-optimized substats:'), ...msgs] : [t('The optimizer returned no substat lines for KQMS characters.')]);
   });
 
   // Ctrl+Enter runs the sim
@@ -83,30 +84,30 @@ export function SimPanel({ project, update, config, result, resultConfig, onResu
     <div className="sim-panel">
       <div className="sim-bar">
         <span className={`cli ${status?.installed ? 'ok' : ''}`}>
-          {status === null ? 'gcsim: checking…' : status.installed ? (
+          {status === null ? t('gcsim: checking…') : status.installed ? (
             <>gcsim <b>{status.release.tag ?? 'CLI'}</b> <code className="muted">{status.version.slice(0, 8)}</code></>
-          ) : 'gcsim CLI not installed'}
+          ) : t('gcsim CLI not installed')}
         </span>
         {status && (
-          <button type="button" className="btn ghost small" disabled={!!busy} onClick={() => task('Downloading gcsim…', async () => setStatus(await gcsim.download()))}>
-            {status.installed ? 'Update gcsim' : 'Download gcsim'}
+          <button type="button" className="btn ghost small" disabled={!!busy} onClick={() => task(t('Downloading gcsim…'), async () => setStatus(await gcsim.download()))}>
+            {status.installed ? t('Update gcsim') : t('Download gcsim')}
           </button>
         )}
         <span className="grow" />
         <button type="button" className="btn primary" disabled={!status?.installed || !!busy} onClick={run} title="Ctrl+Enter">
-          ▶ Run sim
+          ▶ {t('Run sim')}
         </button>
-        <button type="button" className="btn" disabled={!status?.installed || !!busy} onClick={checkEr} title="Runs the rotation with bursts on cooldown and measures how much ER each character needs (gcsim optimizer method)">
-          ⚡ Check ER
+        <button type="button" className="btn" disabled={!status?.installed || !!busy} onClick={checkEr} title={t('Runs the rotation with bursts on cooldown and measures how much ER each character needs (gcsim optimizer method)')}>
+          ⚡ {t('Check ER')}
         </button>
         <button
           type="button"
-          className="btn"
+          className="btn adv"
           disabled={!status?.installed || !!busy || !kqmsCount}
           onClick={optimize}
-          title="gcsim -substatOptim: sim-driven KQMS substats for KQMS characters (overrides the quick heuristic)"
+          title={t('gcsim -substatOptim: sim-driven KQMS substats for KQMS characters (overrides the quick heuristic)')}
         >
-          gcsim substat optimizer
+          {t('gcsim substat optimizer')}
         </button>
       </div>
       {busy && <div className="hint small"><span className="spinner" /> {busy}</div>}
@@ -115,31 +116,31 @@ export function SimPanel({ project, update, config, result, resultConfig, onResu
 
       {result && (
         <div className={`sim-results ${stale ? 'stale' : ''}`}>
-          {stale && <div className="hint warn small">These results are from an earlier version of the config. Run the sim again to refresh.</div>}
+          {stale && <div className="hint warn small">{t('These results are from an earlier version of the config. Run the sim again to refresh.')}</div>}
           <div className="dps-line">
             <span className="dps-big">{fmtInt(result.statistics.dps.mean)}</span>
             <span className="muted">DPS</span>
             <span className="small muted">
-              ± {fmtInt(result.statistics.dps.sd)} · min {fmtInt(result.statistics.dps.min)} · max {fmtInt(result.statistics.dps.max)} ·{' '}
-              {result.statistics.duration.mean.toFixed(1)}s · {result.statistics.iterations} iterations
+              ± {fmtInt(result.statistics.dps.sd)} · {t('min')} {fmtInt(result.statistics.dps.min)} · {t('max')} {fmtInt(result.statistics.dps.max)} ·{' '}
+              {result.statistics.duration.mean.toFixed(1)}s · {t('{n} iterations', { n: result.statistics.iterations })}
             </span>
           </div>
           {Object.entries(result.statistics.warnings ?? {}).filter(([, v]) => v).length > 0 && (
             <div className="hint warn small">
-              gcsim warnings: {Object.entries(result.statistics.warnings).filter(([, v]) => v).map(([k]) => FAIL_LABEL[k] ?? k.replace(/_/g, ' ')).join(', ')}
+              {t('gcsim warnings:')} {Object.entries(result.statistics.warnings).filter(([, v]) => v).map(([k]) => (FAIL_LABEL[k] ? t(FAIL_LABEL[k]) : k.replace(/_/g, ' '))).join(', ')}
             </div>
           )}
           <table className="sim-table small">
             <thead>
               <tr>
-                <th>Character</th>
+                <th>{t('Character')}</th>
                 <th>DPS</th>
-                <th className="share-col">Share</th>
-                <th>Field time</th>
-                <th title="Bursts per iteration: mean (min-max). Fewer than planned usually means not enough energy for an 'if burst ready' check.">Q casts</th>
-                <th title="Average time per iteration gcsim spent waiting because an action wasn't ready">Waiting</th>
-                <th>End energy</th>
-                <th>Reactions</th>
+                <th className="share-col">{t('Share')}</th>
+                <th>{t('Field time')}</th>
+                <th title={t("Bursts per iteration: mean (min-max). Fewer than planned usually means not enough energy for an 'if burst ready' check.")}>{t('Q casts')}</th>
+                <th title={t("Average time per iteration gcsim spent waiting because an action wasn't ready")}>{t('Waiting')}</th>
+                <th>{t('End energy')}</th>
+                <th>{t('Reactions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -169,7 +170,7 @@ export function SimPanel({ project, update, config, result, resultConfig, onResu
                       })()}
                     </td>
                     <td className={fails.length ? 'warn' : 'muted'}>
-                      {fails.length ? fails.map(([k, v]) => `${v.mean.toFixed(2)}s ${FAIL_LABEL[k] ?? k}`).join(', ') : '-'}
+                      {fails.length ? fails.map(([k, v]) => `${v.mean.toFixed(2)}s ${FAIL_LABEL[k] ? t(FAIL_LABEL[k]) : k}`).join(', ') : '-'}
                     </td>
                     <td>{result.statistics.end_stats[i]?.ending_energy.mean.toFixed(0)}</td>
                     <td>{rx.length ? rx.map(([k, v]) => `${k} ×${v.mean.toFixed(0)}`).join(', ') : <span className="muted">-</span>}</td>
@@ -179,7 +180,7 @@ export function SimPanel({ project, update, config, result, resultConfig, onResu
             </tbody>
           </table>
           <button type="button" className="btn ghost small" onClick={() => setShowSources((v) => !v)}>
-            {showSources ? '▾' : '▸'} damage by source
+            {showSources ? '▾' : '▸'} {t('damage by source')}
           </button>
           {showSources && (
             <div className="sources">
@@ -207,8 +208,8 @@ export function SimPanel({ project, update, config, result, resultConfig, onResu
       {er && (
         <div className="er-box">
           <div className="er-head">
-            <strong>Energy check</strong>
-            <span className="muted small">24 runs with bursts on cooldown. "Needed" is the ER required to have every burst ready (80th percentile, like gcsim's optimizer).</span>
+            <strong>{t('Energy check')}</strong>
+            <span className="muted small">{t('24 runs with bursts on cooldown. "Needed" is the ER required to have every burst ready (80th percentile, like gcsim\'s optimizer).')}</span>
             <span className="grow" />
             <button
               type="button"
@@ -217,16 +218,16 @@ export function SimPanel({ project, update, config, result, resultConfig, onResu
               onClick={() => {
                 let msgs: string[] = [];
                 update((p) => { msgs = applyErFix(p, erVerdicts(p, er)); });
-                setNotes(msgs.length ? ['ER fixed:', ...msgs, 'Run the sim again to confirm.'] : ['Nothing to change.']);
+                setNotes(msgs.length ? [t('ER fixed:'), ...msgs, t('Run the sim again to confirm.')] : [t('Nothing to change.')]);
               }}
             >
-              Fix ER for all
+              {t('Fix ER for all')}
             </button>
-            <button type="button" className="icon-btn" onClick={() => setEr(null)} title="Close">✕</button>
+            <button type="button" className="icon-btn" onClick={() => setEr(null)} title={t('Close')}>✕</button>
           </div>
           <table className="sim-table small">
             <thead>
-              <tr><th>Character</th><th>ER now</th><th>Needed (p50 / p80 / max)</th><th>Verdict</th><th /></tr>
+              <tr><th>{t('Character')}</th><th>{t('ER now')}</th><th>{t('Needed (p50 / p80 / max)')}</th><th>{t('Verdict')}</th><th /></tr>
             </thead>
             <tbody>
               {verdicts.map((v) => {
@@ -236,11 +237,11 @@ export function SimPanel({ project, update, config, result, resultConfig, onResu
                   <tr key={v.key}>
                     <td><span className="who">{data && <Icon src={charIcon(data.id)} size={22} className="avatar" />}{data?.name ?? v.key}</span></td>
                     <td>{v.stats.current ? pct(v.stats.current) : v.staticEr ? pct(v.staticEr) : '-'}</td>
-                    <td>{v.status === 'no-burst' ? <span className="muted">bursts &lt; 2 in rotation</span> : `${pct(v.stats.needed.p50)} / ${pct(v.stats.needed.p80)} / ${pct(v.stats.needed.max)}`}</td>
+                    <td>{v.status === 'no-burst' ? <span className="muted">{t('bursts < 2 in rotation')}</span> : `${pct(v.stats.needed.p50)} / ${pct(v.stats.needed.p80)} / ${pct(v.stats.needed.max)}`}</td>
                     <td className={v.status === 'short' ? 'warn' : v.status === 'ok' ? 'ok-text' : 'muted'}>
-                      {v.status === 'short' && `short ${pct(v.delta)} (≈${Math.ceil(subs)} ER subs)`}
-                      {v.status === 'ok' && 'ok'}
-                      {v.status === 'surplus' && `surplus ${pct(-v.delta)} (≈${Math.floor(subs)} subs to free)`}
+                      {v.status === 'short' && t('short {d} (≈{n} ER subs)', { d: pct(v.delta), n: Math.ceil(subs) })}
+                      {v.status === 'ok' && t('ok')}
+                      {v.status === 'surplus' && t('surplus {d} (≈{n} subs to free)', { d: pct(-v.delta), n: Math.floor(subs) })}
                       {v.status === 'no-burst' && '-'}
                     </td>
                     <td>
@@ -254,7 +255,7 @@ export function SimPanel({ project, update, config, result, resultConfig, onResu
                             setNotes(msgs);
                           }}
                         >
-                          {v.build?.statsMode === 'custom' ? 'Add ER to stats' : v.status === 'short' ? 'Raise ER target' : 'Lower ER target'}
+                          {v.build?.statsMode === 'custom' ? t('Add ER to stats') : v.status === 'short' ? t('Raise ER target') : t('Lower ER target')}
                         </button>
                       )}
                     </td>
