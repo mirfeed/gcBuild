@@ -75,7 +75,7 @@ export const RU: Record<string, string> = {
   "Dendro DMG": "Дендро %", "Cryo DMG": "Крио %", "Geo DMG": "Гео %", "Phys DMG": "Физ. %",
   "ATK": "АТК", "HP": "НР", "DEF": "ЗАЩ",
   "Slot {n}": "Слот {n}",
-  "Drag to move this character to another slot": "Перетащите, чтобы переставить персонажа в другой слот",
+  "Hold and drag the top of the card to move this character to another slot": "Зажмите верх карточки и перетащите, чтобы переставить персонажа в другой слот",
   "Add character…": "Добавить персонажа…",
   "Energy needed for the burst (Q)": "Энергия, нужная для взрыва стихии (Q)",
   "Q {n} energy": "Q: {n} энергии",

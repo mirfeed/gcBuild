@@ -150,6 +150,17 @@ export function useGroup() {
     commit({ ...g, teams, active });
   }, [commit]);
 
+  /** reorder: the team at `from` goes to `to`; the open team stays open */
+  const moveTeam = useCallback((from: number, to: number) => {
+    const g = current.current;
+    if (from === to || from < 0 || to < 0 || from >= g.teams.length || to >= g.teams.length) return;
+    const openId = g.teams[g.active].id;
+    const teams = [...g.teams];
+    const [t] = teams.splice(from, 1);
+    teams.splice(to, 0, t);
+    commit({ ...g, teams, active: teams.findIndex((x) => x.id === openId) });
+  }, [commit]);
+
   const renameGroup = useCallback((name: string) => {
     commit({ ...current.current, name });
     bump((n) => n + 1);
@@ -175,6 +186,7 @@ export function useGroup() {
     setActive,
     addTeam,
     removeTeam,
+    moveTeam,
     renameGroup,
     replaceGroup,
   };

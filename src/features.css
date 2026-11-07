@@ -421,3 +421,15 @@ body:has(.app.fancy) {
 }
 .drag-handle:hover { color: var(--text); background: var(--card-2); }
 .drag-handle:active { cursor: grabbing; }
+
+/* round number badges: trim the line box to the digits so they sit in the optical centre (Segoe UI's
+   descender space otherwise pushes them ~1px low) */
+.tt-num, .help-num {
+  line-height: 1; font-variant-numeric: tabular-nums;
+  text-box: trim-both cap alphabetic;
+}
+.char-head.can-drag { cursor: grab; border-radius: 6px; }
+.char-head.can-drag:active { cursor: grabbing; }
+.drag-handle { pointer-events: none; }
+.team-tab.dragging { opacity: 0.45; }
+.team-tab.drop-target { outline: 2px dashed var(--accent); outline-offset: 2px; }

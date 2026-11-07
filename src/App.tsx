@@ -39,7 +39,7 @@ interface SimState {
 }
 
 export default function App() {
-  const { group, project, update, replace, undo, redo, canUndo, canRedo, setActive, addTeam, removeTeam, renameGroup, replaceGroup } = useGroup();
+  const { group, project, update, replace, undo, redo, canUndo, canRedo, setActive, addTeam, removeTeam, moveTeam, renameGroup, replaceGroup } = useGroup();
   const [selected, setSelected] = useState<string | null>(null);
   const [cursor, setCursor] = useState<Cursor>(() => endOf(project, 'loop'));
   const [focusChar, setFocusChar] = useState(0);
@@ -477,6 +477,7 @@ export default function App() {
           const src = group.teams[i];
           addTeam({ ...src, name: `${src.name || t('Team {n}', { n: i + 1 })} (2)` });
         }}
+        onMove={moveTeam}
         onRemove={(i) => {
           const id = group.teams[i].id!;
           removeTeam(i);
@@ -518,7 +519,7 @@ export default function App() {
                 key={b?.uid ?? `empty-${i}`}
                 className={`slot-wrap ${dragFrom === i ? 'dragging' : ''} ${dragFrom !== null && dropAt === i && dragFrom !== i ? 'drop-target' : ''}`}
                 onDragOver={(e) => {
-                  if (dragFrom === null) return;
+                  if (dragFrom === null || !e.dataTransfer.types.includes('application/x-gcbuild-member')) return;
                   e.preventDefault();
                   e.dataTransfer.dropEffect = 'move';
                   if (dropAt !== i) setDropAt(i);
@@ -547,7 +548,7 @@ export default function App() {
                   onDragStart: (e) => {
                     setDragFrom(i);
                     e.dataTransfer.effectAllowed = 'move';
-                    e.dataTransfer.setData('text/plain', String(i));
+                    e.dataTransfer.setData('application/x-gcbuild-member', String(i));
                     const card = e.currentTarget.closest('.char-card');
                     if (card) e.dataTransfer.setDragImage(card, 40, 30);
                   },

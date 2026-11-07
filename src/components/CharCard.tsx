@@ -1,4 +1,4 @@
-import { useMemo, useState, type DragEvent } from 'react';
+import { useMemo, useRef, useState, type DragEvent } from 'react';
 import { ELEMENT_COLORS, characters, getChar, sets, weaponByKey, weapons } from '../data';
 import { CHAR_META } from '../data/curated';
 import { charIcon, setIcon, weaponIcon } from '../data/icons';
@@ -83,6 +83,8 @@ export function CharCard({ slot, build, taken, isActive, onChange, onSetActive, 
   const color = char ? ELEMENT_COLORS[char.element] : 'var(--border)';
   const [addStat, setAddStat] = useState<Stat>('em');
   const [picking, setPicking] = useState<Slot | null>(null);
+  /** a header drag only starts from the header itself, not from the picker's search box / list */
+  const dragOrigin = useRef<HTMLElement | null>(null);
 
   const weaponOptions = useMemo<ComboOption[]>(
     () => (char
@@ -125,19 +127,21 @@ export function CharCard({ slot, build, taken, isActive, onChange, onSetActive, 
 
   return (
     <div className={`card char-card ${isActive ? 'is-active' : ''}`} style={{ ['--el' as string]: color, ['--art' as string]: `url("${charIcon(char.id)}")` }}>
-      <div className="char-head">
-        {drag && (
-          <span
-            className="drag-handle"
-            draggable
-            onDragStart={drag.onDragStart}
-            onDragEnd={drag.onDragEnd}
-            title={t('Drag to move this character to another slot')}
-            aria-label={t('Drag to move this character to another slot')}
-          >
-            ⠿
-          </span>
-        )}
+      <div
+        className={`char-head ${drag ? 'can-drag' : ''}`}
+        draggable={!!drag}
+        onMouseDown={(e) => { dragOrigin.current = e.target as HTMLElement; }}
+        onDragStart={(e) => {
+          if (!drag || dragOrigin.current?.closest('input, textarea, select, .combo-pop')) {
+            e.preventDefault();
+            return;
+          }
+          drag.onDragStart(e);
+        }}
+        onDragEnd={() => drag?.onDragEnd()}
+        title={drag ? t('Hold and drag the top of the card to move this character to another slot') : undefined}
+      >
+        {drag && <span className="drag-handle" aria-hidden="true">⠿</span>}
         <Combobox
           className="char-pick"
           value={build.key}

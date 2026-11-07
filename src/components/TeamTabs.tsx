@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { ELEMENT_COLORS, getChar } from '../data';
 import { charIcon } from '../data/icons';
 import { t } from '../i18n';
@@ -14,12 +15,23 @@ interface Props {
   onAdd: () => void;
   onDuplicate: (i: number) => void;
   onRemove: (i: number) => void;
+  /** drag a tab onto another position */
+  onMove: (from: number, to: number) => void;
 }
+
+/** drag type of a team tab (so character cards and tabs never accept each other's drags) */
+const TAB_DRAG = 'application/x-gcbuild-team';
 
 const fmtK = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(n >= 100000 ? 0 : 1)}k` : String(Math.round(n)));
 
 /** Summary strip: one card per team (members, last DPS, shared characters); click to edit that team below. */
-export function TeamTabs({ group, dps, shared, onSelect, onAdd, onDuplicate, onRemove }: Props) {
+export function TeamTabs({ group, dps, shared, onSelect, onAdd, onDuplicate, onRemove, onMove }: Props) {
+  const [dragFrom, setDragFrom] = useState<number | null>(null);
+  const [dropAt, setDropAt] = useState<number | null>(null);
+  const endDrag = () => {
+    setDragFrom(null);
+    setDropAt(null);
+  };
   return (
     <div className="team-tabs" role="tablist" aria-label={t('Teams in this group')}>
       {group.teams.map((p, i) => {
@@ -33,7 +45,26 @@ export function TeamTabs({ group, dps, shared, onSelect, onAdd, onDuplicate, onR
             role="tab"
             tabIndex={0}
             aria-selected={active}
-            className={`team-tab ${active ? 'on' : ''}`}
+            className={`team-tab ${active ? 'on' : ''} ${dragFrom === i ? 'dragging' : ''} ${dragFrom !== null && dropAt === i && dragFrom !== i ? 'drop-target' : ''}`}
+            draggable={group.teams.length > 1}
+            onDragStart={(e) => {
+              setDragFrom(i);
+              e.dataTransfer.effectAllowed = 'move';
+              e.dataTransfer.setData(TAB_DRAG, String(i));
+            }}
+            onDragEnd={endDrag}
+            onDragOver={(e) => {
+              if (dragFrom === null || !e.dataTransfer.types.includes(TAB_DRAG)) return;
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'move';
+              if (dropAt !== i) setDropAt(i);
+            }}
+            onDrop={(e) => {
+              if (dragFrom === null || !e.dataTransfer.types.includes(TAB_DRAG)) return;
+              e.preventDefault();
+              onMove(dragFrom, i);
+              endDrag();
+            }}
             onClick={() => onSelect(i)}
             onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onSelect(i)}
             title={sh.length ? t('Shares characters with: {teams}', { teams: sh.join(', ') }) : p.name}
