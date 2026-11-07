@@ -376,3 +376,36 @@ body:has(.app.fancy) {
 
 /* theme switch */
 .theme-switch button { padding: 3px 7px; font-size: 13px; }
+
+/* ------------------------------------------------------------------ group of teams: summary strip */
+.team-tabs { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 4px; }
+.team-tab {
+  flex: 0 0 auto; min-width: 210px; max-width: 280px; display: flex; flex-direction: column; gap: 6px; padding: 8px 10px;
+  border-radius: 12px; cursor: pointer; background: color-mix(in srgb, var(--panel) 86%, transparent);
+  border: 1px solid transparent; transition: border-color 0.12s, background 0.12s;
+}
+.team-tab:hover { border-color: var(--border); }
+.team-tab.on { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: color-mix(in srgb, var(--accent) 10%, var(--panel)); }
+.team-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.tt-head { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 13px; }
+.tt-num { flex: none; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 700; background: var(--card-2); color: var(--muted); }
+.team-tab.on .tt-num { background: var(--accent-2); color: #fff; }
+.tt-name { font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tt-warn { color: var(--warn); }
+.tt-btn { border: 0; background: none; color: var(--muted); padding: 0 3px; font-size: 12px; opacity: 0; border-radius: 4px; }
+.team-tab:hover .tt-btn, .team-tab.on .tt-btn { opacity: 1; }
+.tt-btn:hover { color: var(--text); background: var(--card-2); }
+.tt-body { display: flex; align-items: center; gap: 8px; }
+.tt-avatars { display: flex; gap: 3px; }
+.tt-empty { width: 29px; height: 29px; border-radius: 50%; border: 1px dashed var(--border); }
+.tt-dps { margin-left: auto; font-weight: 700; font-size: 14px; white-space: nowrap; }
+.tt-dps small { font-weight: 500; color: var(--muted); font-size: 10.5px; }
+.tt-dps.stale { color: var(--muted); font-style: italic; }
+.team-tab.add {
+  min-width: 70px; align-items: center; justify-content: center; gap: 0; color: var(--muted);
+  border: 1px dashed var(--border); font: inherit;
+}
+.team-tab.add span { font-size: 20px; line-height: 1; }
+.team-tab.add:hover { color: var(--accent); border-color: var(--accent); }
+.share-warn { margin: -6px 4px 0; }
+.also-in { color: var(--warn); margin: 2px 0 0 4px; }

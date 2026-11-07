@@ -5,7 +5,8 @@ import { normalizeProject } from '../lib/rotation';
 import type { Project } from '../lib/types';
 import { t } from '../i18n';
 
-const PROJECT_KEY = 'gcbuild.project.v1';
+const PROJECT_KEY = 'gcbuild.group.v1';
+const OLD_PROJECT_KEY = 'gcbuild.project.v1';
 
 interface State {
   error: Error | null;
@@ -17,8 +18,11 @@ interface State {
 function savedConfig(): string | undefined {
   let raw: string | null = null;
   try {
-    raw = localStorage.getItem(PROJECT_KEY);
-    return raw ? generateConfig(normalizeProject(JSON.parse(raw) as Project)) : undefined;
+    raw = localStorage.getItem(PROJECT_KEY) ?? localStorage.getItem(OLD_PROJECT_KEY);
+    if (!raw) return undefined;
+    const data = JSON.parse(raw) as Project | { teams: Project[]; active: number };
+    const p = 'teams' in data ? data.teams[data.active] ?? data.teams[0] : data;
+    return generateConfig(normalizeProject(p));
   } catch {
     return raw ? `# could not generate the config, saved project:\n${raw}` : undefined;
   }
@@ -50,6 +54,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
         const raw = localStorage.getItem(PROJECT_KEY);
         if (raw) localStorage.setItem(`${PROJECT_KEY}.crashed`, raw);
         localStorage.removeItem(PROJECT_KEY);
+        localStorage.removeItem(OLD_PROJECT_KEY);
       } catch {
         // storage unavailable
       }

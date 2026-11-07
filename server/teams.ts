@@ -26,10 +26,21 @@ export function createTeamsApi(root: string) {
     return out.sort((a, b) => b.modified - a.modified);
   }
 
-  async function save(name: string, project: unknown, config: string) {
+  /** gcsim configs written next to a save: "<name>.txt", or "<name> - 1. Team.txt"… for a group */
+  async function configFiles(n: string) {
+    const files = await fs.readdir(dir).catch(() => [] as string[]);
+    return files.filter((f) => f === `${n}.txt` || (f.startsWith(`${n} - `) && f.endsWith('.txt')));
+  }
+
+  async function save(name: string, project: unknown, config: string, configs?: { label: string; text: string }[]) {
     await fs.mkdir(dir, { recursive: true });
     const n = safeName(name);
+    for (const f of await configFiles(n)) await fs.rm(path.join(dir, f), { force: true });
     await fs.writeFile(path.join(dir, `${n}.gcbuild.json`), JSON.stringify(project, null, 2));
+    if (configs?.length) {
+      for (const c of configs) await fs.writeFile(path.join(dir, `${n} - ${safeName(c.label)}.txt`), c.text);
+      return { name: n, path: path.join(dir, `${n}.gcbuild.json`) };
+    }
     await fs.writeFile(path.join(dir, `${n}.txt`), config);
     return { name: n, path: path.join(dir, `${n}.txt`) };
   }
@@ -42,7 +53,7 @@ export function createTeamsApi(root: string) {
   async function remove(name: string) {
     const n = safeName(name);
     await fs.rm(path.join(dir, `${n}.gcbuild.json`), { force: true });
-    await fs.rm(path.join(dir, `${n}.txt`), { force: true });
+    for (const f of await configFiles(n)) await fs.rm(path.join(dir, f), { force: true });
     return { ok: true };
   }
 
@@ -69,7 +80,12 @@ export function createTeamsApi(root: string) {
       const b = await body(req);
       const name = String(b.name ?? '');
       switch (route) {
-        case 'save': return send(res, 200, await save(name, b.project, String(b.config ?? '')));
+        case 'save': {
+          const configs = Array.isArray(b.configs)
+            ? (b.configs as { label?: unknown; text?: unknown }[]).map((c) => ({ label: String(c.label ?? ''), text: String(c.text ?? '') }))
+            : undefined;
+          return send(res, 200, await save(name, b.project, String(b.config ?? ''), configs));
+        }
         case 'load': return send(res, 200, await load(name));
         case 'delete': return send(res, 200, await remove(name));
       }

@@ -211,6 +211,8 @@ export interface SimOptions {
 }
 
 export interface Project {
+  /** stable id within a group (per-team undo history, sim results) */
+  id?: string;
   name: string;
   team: (CharBuild | null)[];
   active: string;

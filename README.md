@@ -8,6 +8,11 @@ A local web app for building and running [gcsim](https://gcsim.app) configs with
   language). The app starts in a **simple mode** with only the essentials; *Advanced* shows every setting (KQMS
   details and substat rolls, level, logic blocks, gcsim optimizer, all sim options, the raw config). Rarely used
   actions (new / example team, import config, open / export, report a bug) are in the **⋯** menu.
+- **Several teams at once (a group).** A strip above the team shows a card per team: members, last sim DPS and a
+  ⚠ when a character is used by more than one team (allowed, but flagged; same for artifacts). Click a card to
+  edit that team; + adds one, ⧉ copies, ✕ removes. Each team keeps its own rotation, undo history and sim results.
+  *Teams → Save the group* stores all of them in one file (plus a gcsim config per team); *Load* replaces the
+  open group, *+ as tab* adds the saved teams to it.
 - **KQMS builds in one click.** Pick character, weapon and sets, then press *Generate KQMS*. Substats follow the
   KQM Standards used by gcsim's substat optimizer: 5★ main stats, 2 fixed rolls of every substat, and 20 liquid
   rolls capped at 10 per stat minus 2 per matching main stat. Liquid rolls go to ER until the ER target is met,

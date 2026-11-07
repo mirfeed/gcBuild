@@ -21,11 +21,12 @@ import { openReport } from './lib/report';
 import { desktop } from './lib/desktop';
 import { checkForUpdatesNow, UpdateBanner, useUpdateStatus } from './components/UpdateBanner';
 import { TitleBar } from './components/TitleBar';
+import { TeamTabs } from './components/TeamTabs';
 import { useLibrary } from './lib/library';
 import { act, emptyProject, exampleProject, uid } from './lib/project';
 import { getList, locate, pruneChar, removeItem } from './lib/rotation';
 import { parseSample, type SampleTimeline } from './lib/sample';
-import { useProject } from './lib/store';
+import { toGroup, useGroup, type Group } from './lib/store';
 import { simulate } from './lib/timeline';
 import { SLOTS, type CharBuild, type Project } from './lib/types';
 import { setAdvanced, setBackgrounds, setTheme, useAdvanced, useBackgrounds, useTheme, type Theme } from './lib/ui';
@@ -38,7 +39,7 @@ interface SimState {
 }
 
 export default function App() {
-  const { project, update, replace, undo, redo, canUndo, canRedo } = useProject();
+  const { group, project, update, replace, undo, redo, canUndo, canRedo, setActive, addTeam, removeTeam, renameGroup, replaceGroup } = useGroup();
   const [selected, setSelected] = useState<string | null>(null);
   const [cursor, setCursor] = useState<Cursor>(() => endOf(project, 'loop'));
   const [focusChar, setFocusChar] = useState(0);
@@ -46,8 +47,24 @@ export default function App() {
   const [waitFrames, setWaitFrames] = useState(30);
   const [teamOpen, setTeamOpen] = useState(true);
   const [tlView, setTlView] = useState<'estimate' | 'sim'>('estimate');
-  const [sim, setSim] = useState<SimState | null>(null);
-  const [er, setEr] = useState<ErStats[] | null>(null);
+  // sim results and ER checks per team: kept while switching between the group's teams
+  const [sims, setSims] = useState<Record<string, SimState>>({});
+  const [ers, setErs] = useState<Record<string, ErStats[]>>({});
+  const teamId = project.id!;
+  const sim = sims[teamId] ?? null;
+  const er = ers[teamId] ?? null;
+  const setSim = (s: SimState | null) => setSims((m) => {
+    const n = { ...m };
+    if (s) n[teamId] = s;
+    else delete n[teamId];
+    return n;
+  });
+  const setEr = (e: ErStats[] | null) => setErs((m) => {
+    const n = { ...m };
+    if (e) n[teamId] = e;
+    else delete n[teamId];
+    return n;
+  });
   const [importOpen, setImportOpen] = useState(false);
   const [importMsg, setImportMsg] = useState<string[]>([]);
   const [libOpen, setLibOpen] = useState(false);
@@ -71,18 +88,64 @@ export default function App() {
   const config = useMemo(() => generateConfig(project), [project]);
   const taken = project.team.filter(Boolean).map((b) => b!.key);
 
-  /** artifact id -> name of the team character wearing it (artifacts mode builds) */
+  const teamLabel = (p: Project, i: number) => p.name || t('Team {n}', { n: i + 1 });
+
+  /** artifact id -> who wears it: "Name" in this team, "Name (Team 2)" in another team of the group */
   const usedBy = useMemo(() => {
     const m = new Map<string, string>();
-    for (const b of project.team) {
-      if (!b || b.statsMode !== 'artifacts') continue;
-      for (const s of SLOTS) {
-        const id = b.gear?.[s]?.id;
-        if (id) m.set(id, getChar(b.key)?.name ?? b.key);
+    const order = group.teams.map((_, i) => i).filter((i) => i !== group.active).concat(group.active);
+    for (const ti of order) {
+      const p = group.teams[ti];
+      for (const b of p.team) {
+        if (!b || b.statsMode !== 'artifacts') continue;
+        const who = getChar(b.key)?.name ?? b.key;
+        for (const s of SLOTS) {
+          const id = b.gear?.[s]?.id;
+          if (id) m.set(id, ti === group.active ? who : `${who} (${t('team {n}', { n: ti + 1 })})`);
+        }
       }
     }
     return m;
-  }, [project.team]);
+  }, [group]);
+
+  /** characters / artifacts used by more than one team of the group (allowed, but flagged) */
+  const sharing = useMemo(() => {
+    const keysOf = (p: Project) => new Set(p.team.filter(Boolean).map((b) => b!.key));
+    const artsOf = (p: Project) => new Set(p.team.flatMap((b) => (b?.statsMode === 'artifacts' ? SLOTS.map((s) => b.gear?.[s]?.id).filter(Boolean) as string[] : [])));
+    const keys = group.teams.map(keysOf);
+    const arts = group.teams.map(artsOf);
+    const shared: Record<string, string[]> = {};
+    group.teams.forEach((p, i) => {
+      shared[p.id!] = group.teams.flatMap((q, j) => (j !== i && [...keys[i]].some((k) => keys[j].has(k)) ? [`${j + 1}. ${teamLabel(q, j)}`] : []));
+    });
+    // team numbers (1-based) are unambiguous even when teams share a name
+    const alsoIn = new Map<string, string[]>();
+    for (const k of keys[group.active]) {
+      const where = group.teams.flatMap((_, j) => (j !== group.active && keys[j].has(k) ? [String(j + 1)] : []));
+      if (where.length) alsoIn.set(k, where);
+    }
+    const sharedArts = [...arts[group.active]].filter((id) => arts.some((s, j) => j !== group.active && s.has(id))).length;
+    return { shared, alsoIn, sharedArts };
+  }, [group]);
+
+  /** last sim DPS per team for the summary strip */
+  const teamDps = useMemo(() => {
+    const out: Record<string, { dps: number; stale: boolean } | undefined> = {};
+    for (const p of group.teams) {
+      const s = sims[p.id!];
+      if (s) out[p.id!] = { dps: s.result.statistics.dps.mean, stale: s.config !== generateConfig(p) };
+    }
+    return out;
+  }, [group, sims]);
+
+  // switching teams: fresh cursor / selection, show that team's sim sample if it has one
+  useEffect(() => {
+    setSelected(null);
+    setCursor(endOf(project, 'loop'));
+    setFocusChar(0);
+    setTlView(sims[teamId] ? 'sim' : 'estimate');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teamId]);
 
   // keep the cursor valid after edits / undo
   useEffect(() => {
@@ -237,11 +300,14 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, [project, cursor, selected, focusChar, waitFrames, update, undo, redo]);
 
+  const multi = group.teams.length > 1;
   const exportJson = () => {
-    const blob = new Blob([JSON.stringify(project, null, 2)], { type: 'application/json' });
+    // one team: the project as before; several: the whole group
+    const data: Project | Group = multi ? { ...group, format: 'gcbuild-group' } : project;
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `${(project.name || 'team').replace(/[^\w-]+/g, '_')}.gcbuild.json`;
+    a.download = `${((multi ? group.name : project.name) || 'team').replace(/[^\w-]+/g, '_')}.gcbuild.json`;
     a.click();
     URL.revokeObjectURL(a.href);
   };
@@ -250,9 +316,11 @@ export default function App() {
     const text = await file.text();
     if (/\.json$/i.test(file.name)) {
       try {
-        const p = JSON.parse(text) as Project;
-        if (!Array.isArray(p.team) || !p.rotation) throw new Error(t('not a gcBuild project'));
-        loadProject(p);
+        const g = toGroup(JSON.parse(text));
+        if (!g) throw new Error(t('not a gcBuild project'));
+        // a group file replaces the group; a single team replaces the open team
+        if (g.teams.length > 1) replaceGroup(g);
+        else loadProject(g.teams[0]);
         setImportMsg([]);
       } catch (err) {
         setImportMsg([t('Could not open: {error}', { error: (err as Error).message })]);
@@ -266,7 +334,7 @@ export default function App() {
     <div className={`app ${advanced ? 'advanced' : 'simple'} ${backgrounds ? 'fancy' : 'plain'} ${desktop ? 'desktop' : ''}`}>
       {desktop && (
         <TitleBar
-          title={project.name}
+          title={multi ? `${group.name} · ${project.name}` : project.name}
           onUndo={undo}
           onRedo={redo}
           canUndo={canUndo}
@@ -305,8 +373,18 @@ export default function App() {
             label="⋯"
             title={t('More')}
             items={[
-              { label: t('New team'), onClick: () => loadProject(emptyProject()) },
-              { label: t('Example team'), onClick: () => loadProject(exampleProject()) },
+              { label: t('Add a team'), onClick: () => addTeam({ ...emptyProject(), name: t('Team {n}', { n: group.teams.length + 1 }) }) },
+              { label: t('Example team'), onClick: () => loadProject(exampleProject()), title: t('Replaces the open team (Ctrl+Z undoes it)') },
+              {
+                label: t('New group'),
+                onClick: () => {
+                  if (!confirm(t('Start over with one empty team? Save the current group in Teams first if you want to keep it.'))) return;
+                  const p = { ...emptyProject(), id: uid(), name: t('Team {n}', { n: 1 }) };
+                  replaceGroup({ format: 'gcbuild-group', name: t('New group'), teams: [p], active: 0 });
+                  setSims({});
+                  setErs({});
+                },
+              },
               { label: t('Import gcsim config'), onClick: () => { setImportOpen(true); setImportMsg([]); } },
               { label: t('Open file…'), onClick: () => fileInput.current?.click(), title: t('Open a .gcbuild.json project or a gcsim config .txt') },
               { label: t('Export project'), onClick: exportJson },
@@ -356,7 +434,15 @@ export default function App() {
       <UpdateBanner status={update$} />
       {helpOpen && <HelpPanel onClose={() => setHelpOpen(false)} />}
       {importOpen && <ImportBox onImport={doImport} onClose={() => setImportOpen(false)} />}
-      {teamsOpen && <TeamsPanel project={project} onLoad={loadProject} onClose={() => setTeamsOpen(false)} />}
+      {teamsOpen && (
+        <TeamsPanel
+          group={group}
+          onLoadGroup={(g) => { replaceGroup(g); setSims({}); setErs({}); }}
+          onAddTeams={(teams) => teams.forEach((p) => addTeam(p))}
+          onRenameGroup={renameGroup}
+          onClose={() => setTeamsOpen(false)}
+        />
+      )}
       {enkaOpen && <EnkaPanel project={project} library={library} inventory={inventory} onUse={applyBuild} onClose={() => setEnkaOpen(false)} />}
       {artsOpen && <ArtifactsPanel inventory={inventory} usedBy={usedBy} onClose={() => setArtsOpen(false)} />}
       {libOpen && <LibraryPanel library={library} project={project} onUse={applyBuild} onClose={() => setLibOpen(false)} />}
@@ -364,6 +450,34 @@ export default function App() {
         <div className="hint small import-msg">
           {importMsg.map((m) => <div key={m}>{m}</div>)}
           <button type="button" className="btn ghost small" onClick={() => setImportMsg([])}>ok</button>
+        </div>
+      )}
+
+      <TeamTabs
+        group={group}
+        dps={teamDps}
+        shared={sharing.shared}
+        onSelect={setActive}
+        onAdd={() => addTeam({ ...emptyProject(), name: t('Team {n}', { n: group.teams.length + 1 }) })}
+        onDuplicate={(i) => {
+          setActive(i);
+          const src = group.teams[i];
+          addTeam({ ...src, name: `${src.name || t('Team {n}', { n: i + 1 })} (2)` });
+        }}
+        onRemove={(i) => {
+          const id = group.teams[i].id!;
+          removeTeam(i);
+          setSims((m) => { const n = { ...m }; delete n[id]; return n; });
+          setErs((m) => { const n = { ...m }; delete n[id]; return n; });
+        }}
+      />
+      {(sharing.alsoIn.size > 0 || sharing.sharedArts > 0) && (
+        <div className="hint warn small share-warn">
+          ⚠ {sharing.alsoIn.size > 0 && t('Shared with team {teams}: {names}', {
+            teams: [...new Set([...sharing.alsoIn.values()].flat())].sort((a, b) => +a - +b).join(', '),
+            names: [...sharing.alsoIn.keys()].map((k) => getChar(k)?.name ?? k).join(', '),
+          })}
+          {sharing.sharedArts > 0 && `${sharing.alsoIn.size ? ' · ' : ''}${t('{n} artifact(s) are also worn in another team', { n: sharing.sharedArts })}`}
         </div>
       )}
 
@@ -400,6 +514,7 @@ export default function App() {
                 onSave={() => b && saveBuild(b)}
                 inventory={inventory.items}
                 usedBy={usedBy}
+                alsoIn={b ? sharing.alsoIn.get(b.key) : undefined}
               />
             ))}
           </div>

@@ -61,6 +61,8 @@ interface Props {
   /** imported artifact inventory, and which team character uses which artifact id */
   inventory: Artifact[];
   usedBy: Map<string, string>;
+  /** other teams of the group with this character */
+  alsoIn?: string[];
 }
 
 function StatSelect({ value, options, onChange, disabled }: { value: Stat; options: Stat[]; onChange: (s: Stat) => void; disabled?: boolean }) {
@@ -73,7 +75,7 @@ function StatSelect({ value, options, onChange, disabled }: { value: Stat; optio
   );
 }
 
-export function CharCard({ slot, build, taken, isActive, onChange, onSetActive, onKqms, saved, onSave, inventory, usedBy }: Props) {
+export function CharCard({ slot, build, taken, isActive, onChange, onSetActive, onKqms, saved, onSave, inventory, usedBy, alsoIn }: Props) {
   const char = build ? getChar(build.key) : undefined;
   const weapon = build ? weaponByKey.get(build.weapon.key) : undefined;
   const color = char ? ELEMENT_COLORS[char.element] : 'var(--border)';
@@ -148,6 +150,7 @@ export function CharCard({ slot, build, taken, isActive, onChange, onSetActive, 
         <button type="button" className="icon-btn" title={t('Save to My builds')} onClick={onSave}>💾</button>
         <button type="button" className="icon-btn" title={t('Remove')} onClick={() => onChange(null)}>✕</button>
       </div>
+      {alsoIn && alsoIn.length > 0 && <div className="also-in small">⚠ {t('also in team {teams}', { teams: alsoIn.join(', ') })}</div>}
       {saved.length > 0 && (
         <select
           className="saved-pick"
