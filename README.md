@@ -111,6 +111,14 @@ git push --follow-tags     # the workflow builds the installer and attaches it t
 
 Then open *Releases* on GitHub, describe the changes and press *Publish release*: installed apps pick it up
 within a few hours (or at the next start). Drafts are invisible to the apps, so nothing ships until you publish.
+Publishing also posts the release to the Discord #releases channel (`.github/workflows/announce.yml`).
+
+**Closed beta.** A version with a suffix (`npm version 0.2.0-beta.1`, then `git push --follow-tags`) is not
+published on GitHub: the workflow uploads it to the closed beta feed (gcB-Bot on gcbuild.duckdns.org), and the bot
+announces it in the Discord #beta channel. Beta testers get a personal key with `/beta-key` in Discord and turn on
+*⋯ → Beta versions…* in the app; turning it off goes back to the latest stable. Stable releases are copied to the
+feed too, so testers get them when they are newer than the last beta. Needs the repository secrets
+`BETA_UPLOAD_TOKEN` and `DISCORD_RELEASES_WEBHOOK`.
 `npm run release:win` does the same from your PC (needs `GH_TOKEN`, e.g. `GH_TOKEN=$(gh auth token)`).
 `GCBUILD_UPDATE_URL=<url>` makes the app read updates from a plain HTTP folder (`latest.yml` + installer) to test
 an update without publishing.

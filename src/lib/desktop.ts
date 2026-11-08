@@ -6,7 +6,19 @@ export type UpdateStatus =
   | { state: 'downloading'; version: string; percent: number }
   | { state: 'ready'; version: string }
   | { state: 'error'; message: string }
+  /** beta channel: the server no longer accepts the key (revoked, or the Beta tester role was removed) */
+  | { state: 'beta-key-rejected' }
   | { state: 'dev' };
+
+export interface BetaInfo {
+  enabled: boolean;
+  hasKey: boolean;
+  feed: string;
+}
+
+export type BetaSetResult =
+  | { ok: true; note?: 'no-beta-yet' }
+  | { ok: false; error: 'invalid-key' | 'offline' | 'server'; message?: string };
 
 export interface DesktopBridge {
   isDesktop: true;
@@ -19,6 +31,10 @@ export interface DesktopBridge {
   updateStatus: () => Promise<UpdateStatus>;
   checkUpdates: () => Promise<UpdateStatus>;
   installUpdate: () => Promise<void>;
+  /** closed beta channel (key from the Discord bot's /beta-key) */
+  betaGet?: () => Promise<BetaInfo>;
+  /** turns beta on (checks the key with the server first) or off; an empty key reuses the saved one */
+  betaSet?: (enabled: boolean, key?: string) => Promise<BetaSetResult>;
   /** subscribe to update progress; returns the unsubscribe function */
   onUpdate: (cb: (s: UpdateStatus) => void) => () => void;
 }

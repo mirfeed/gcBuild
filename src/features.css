@@ -338,6 +338,14 @@ body:has(.app.fancy) {
 .update-banner.ready { background: color-mix(in srgb, var(--ok) 14%, var(--panel)); border-color: color-mix(in srgb, var(--ok) 45%, transparent); }
 .update-banner.warn { background: color-mix(in srgb, var(--warn) 12%, var(--panel)); border-color: color-mix(in srgb, var(--warn) 40%, transparent); }
 
+/* ------------------------------------------------------------------ desktop app: beta channel dialog */
+.modal.narrow { width: min(520px, 100%); }
+.beta-dialog { display: flex; flex-direction: column; gap: 12px; }
+.beta-dialog p { margin: 0; line-height: 1.45; }
+.beta-dialog .beta-key { width: 100%; font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; }
+.beta-actions { display: flex; align-items: center; gap: 12px; }
+.beta-msg { font-size: 12.5px; }
+
 /* ------------------------------------------------------------------ desktop app: custom title bar */
 :root { --titlebar-h: 34px; --titlebar: #0b0e13; --titlebar-fg: #c9d1e0; }
 @media (prefers-color-scheme: light) { :root:not([data-theme='dark']) { --titlebar: #e6e9f0; --titlebar-fg: #1b2333; } }

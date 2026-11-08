@@ -10,6 +10,8 @@ contextBridge.exposeInMainWorld('gcbuild', {
   updateStatus: () => ipcRenderer.invoke('update-status'),
   checkUpdates: () => ipcRenderer.invoke('update-check'),
   installUpdate: () => ipcRenderer.invoke('update-install'),
+  betaGet: () => ipcRenderer.invoke('beta-get'),
+  betaSet: (enabled, key) => ipcRenderer.invoke('beta-set', enabled, key),
   onUpdate: (cb) => {
     const fn = (_e, s) => cb(s);
     ipcRenderer.on('update-status', fn);

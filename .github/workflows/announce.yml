@@ -1,0 +1,54 @@
+# Posts a stable release to the gcBuild Discord #releases (pinging @Updates) when it's published on GitHub.
+# Betas never reach GitHub: they go to the closed feed and gcB-Bot announces them in #beta itself.
+# Secret DISCORD_RELEASES_WEBHOOK (Settings → Secrets and variables → Actions) = the #releases webhook URL that
+# gcB-Bot prints with `npm run setup -- --webhooks`.
+name: Announce release on Discord
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  discord:
+    runs-on: ubuntu-latest
+    # a pre-release here would be public anyway; still, don't ping everyone about it
+    if: ${{ !github.event.release.prerelease }}
+    steps:
+      - name: Post to Discord
+        env:
+          RELEASE: ${{ toJSON(github.event.release) }}
+          WEBHOOK: ${{ secrets.DISCORD_RELEASES_WEBHOOK }}
+          # Discord role ID of @Updates (not secret)
+          UPDATES_ROLE: '1569034743381758034'
+        run: |
+          node --input-type=module <<'EOF'
+          const r = JSON.parse(process.env.RELEASE);
+          const hook = process.env.WEBHOOK;
+          if (!hook) {
+            console.error('secret DISCORD_RELEASES_WEBHOOK is not set');
+            process.exit(1);
+          }
+          const role = process.env.UPDATES_ROLE;
+          const name = r.name || r.tag_name.replace(/^v/, '');
+          const exe = (r.assets || []).find((a) => a.name.endsWith('.exe'));
+          let body = (r.body || '').trim() || '—';
+          if (body.length > 3500) body = body.slice(0, 3500) + `…\n\n[Full notes / Полностью](${r.html_url})`;
+          const fields = [];
+          if (exe) fields.push({ name: 'Download / Скачать', value: `[${exe.name}](${exe.browser_download_url})` });
+          const payload = {
+            username: 'gcBuild',
+            content: `<@&${role}> 🚀 **gcBuild ${name}**`,
+            allowed_mentions: { roles: [role] },
+            embeds: [{ title: `gcBuild ${name}`, url: r.html_url, description: body, color: 0x5b84f0, fields, timestamp: r.published_at }],
+          };
+          const res = await fetch(`${hook}?wait=true`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          if (!res.ok) {
+            console.error(`Discord: ${res.status} ${await res.text()}`);
+            process.exit(1);
+          }
+          console.log(`posted ${name} to #releases`);
+          EOF

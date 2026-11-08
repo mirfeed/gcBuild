@@ -21,7 +21,7 @@ export function useUpdateStatus(): UpdateStatus {
 }
 
 /** Desktop app only: download progress, "Restart to update", and the answer to a manual check. */
-export function UpdateBanner({ status }: { status: UpdateStatus }) {
+export function UpdateBanner({ status, onBeta }: { status: UpdateStatus; onBeta?: () => void }) {
   const [dismissed, setDismissed] = useState('');
   const [, tick] = useState(0);
   const manual = Date.now() - manualAt < 60_000;
@@ -49,6 +49,17 @@ export function UpdateBanner({ status }: { status: UpdateStatus }) {
         <>
           <span>{t('Update {v} is ready.', { v: status.version })}</span>
           <button type="button" className="btn primary small" onClick={() => void desktop!.installUpdate()}>{t('Restart to update')}</button>
+          <button type="button" className="btn ghost small" onClick={() => setDismissed(key)}>{t('Later')}</button>
+        </>
+      );
+      break;
+    case 'beta-key-rejected':
+      // shown even after a background check: the tester would otherwise silently stop getting betas
+      tone = 'warn';
+      body = (
+        <>
+          <span>{t('Your beta key is no longer accepted, so beta updates have stopped.')}</span>
+          {onBeta && <button type="button" className="btn small" onClick={onBeta}>{t('Beta versions…')}</button>}
           <button type="button" className="btn ghost small" onClick={() => setDismissed(key)}>{t('Later')}</button>
         </>
       );

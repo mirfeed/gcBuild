@@ -20,6 +20,7 @@ import { generateKqms } from './lib/kqms';
 import { openReport } from './lib/report';
 import { desktop } from './lib/desktop';
 import { checkForUpdatesNow, UpdateBanner, useUpdateStatus } from './components/UpdateBanner';
+import { BetaDialog } from './components/BetaDialog';
 import { TitleBar } from './components/TitleBar';
 import { TeamTabs } from './components/TeamTabs';
 import { useLibrary } from './lib/library';
@@ -81,6 +82,11 @@ export default function App() {
   const backgrounds = useBackgrounds();
   const theme = useTheme();
   const update$ = useUpdateStatus();
+  const [betaOpen, setBetaOpen] = useState(false);
+  const [betaOn, setBetaOn] = useState(false);
+  useEffect(() => {
+    void desktop?.betaGet?.().then((b) => setBetaOn(b.enabled));
+  }, []);
   const [helpOpen, setHelpOpen] = useState(() => !helpSeen());
   useEffect(() => {
     if (helpOpen) markHelpSeen();
@@ -407,6 +413,7 @@ export default function App() {
                   { label: t('Import from old folder…'), onClick: () => void desktop!.importOld(), title: t('Copy artifacts, My builds, teams and gcsim from a gcBuild folder used with start.bat') },
                   { label: t('Open data folder'), onClick: () => void desktop!.openDataFolder() },
                   { label: t('Check for updates'), onClick: checkForUpdatesNow, disabled: update$.state === 'dev' || update$.state === 'downloading' || update$.state === 'ready' },
+                  { label: betaOn ? t('Beta versions: on') : t('Beta versions…'), onClick: () => setBetaOpen(true), title: t('Closed beta for Beta testers in the gcBuild Discord') },
                 ]
                 : []),
               { label: t('Report a bug'), onClick: () => openReport('Bug: ', { config }), title: t('Report a problem on GitHub: opens a new issue with versions and the current config filled in') },
@@ -444,7 +451,8 @@ export default function App() {
         </div>
       </header>
 
-      <UpdateBanner status={update$} />
+      <UpdateBanner status={update$} onBeta={() => setBetaOpen(true)} />
+      {betaOpen && <BetaDialog onClose={() => setBetaOpen(false)} onChange={setBetaOn} />}
       {helpOpen && <HelpPanel onClose={() => setHelpOpen(false)} />}
       {importOpen && <ImportBox onImport={doImport} onClose={() => setImportOpen(false)} />}
       {teamsOpen && (

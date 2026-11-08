@@ -1,7 +1,15 @@
-# Builds the Windows installer and uploads it to a DRAFT GitHub release when a version tag is pushed:
-#   npm version 0.2.0        (bumps package.json, commits, tags v0.2.0)
-#   git push --follow-tags
-# Then open Releases on GitHub, write what changed and press "Publish": installed apps update themselves.
+# Builds the Windows installer when a version tag is pushed.
+#
+# Stable:  npm version 0.2.0 && git push --follow-tags
+#   → a DRAFT GitHub release. Open Releases, write what changed and press "Publish": installed apps update
+#     themselves and announce.yml posts it to Discord #releases. The build is also copied to the closed beta
+#     feed, where it replaces the last beta only if it is newer (so testers get the stable too).
+#
+# Beta:    npm version 0.2.0-beta.1 && git push --follow-tags
+#   → NOT on GitHub. Uploaded to the closed beta feed (gcB-Bot on gcbuild.duckdns.org); apps with
+#     "Beta versions" on and a valid key update to it, and the bot announces it in the closed #beta channel.
+#
+# Secret BETA_UPLOAD_TOKEN (Settings → Secrets and variables → Actions) = BETA_UPLOAD_TOKEN from the bot's .env.
 name: Release (Windows app)
 
 on:
@@ -10,6 +18,9 @@ on:
 
 permissions:
   contents: write
+
+env:
+  BETA_UPLOAD_URL: https://gcbuild.duckdns.org/beta-upload
 
 jobs:
   windows:
@@ -32,9 +43,35 @@ jobs:
 
       - run: npm run typecheck
 
+      # ---------------------------------------------------------------- beta (v0.2.0-beta.1): closed feed only
+      - name: Build beta installer
+        if: contains(github.ref_name, '-')
+        run: npm run dist:win
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      - name: Upload beta to the closed feed
+        if: contains(github.ref_name, '-')
+        shell: bash
+        env:
+          TOKEN: ${{ secrets.BETA_UPLOAD_TOKEN }}
+        run: |
+          [ -n "$TOKEN" ] || { echo "::error::secret BETA_UPLOAD_TOKEN is not set"; exit 1; }
+          v="${GITHUB_REF_NAME#v}"
+          exe="gcBuild-Setup-$v.exe"
+          # electron-builder names the update file latest.yml for a GitHub publish config; the feed serves beta.yml
+          yml=""; for y in release/beta.yml release/latest.yml; do [ -f "$y" ] && { yml="$y"; break; }; done
+          [ -n "$yml" ] && [ -f "release/$exe" ] || { echo "::error::build output not found"; ls release; exit 1; }
+          up() { curl -fsS --retry 3 --max-time 900 -X PUT -H "Authorization: Bearer $TOKEN" -T "$1" "$BETA_UPLOAD_URL/$2"; echo; }
+          up "release/$exe" "$exe"
+          up "release/$exe.blockmap" "$exe.blockmap"
+          up "$yml" beta.yml   # last: this switches testers to the new build
+
+      # ---------------------------------------------------------------- stable (v0.2.0): GitHub draft release
       # electron-builder uploads the installer, latest.yml and the .blockmap in parallel; with no release yet each
       # upload creates its own draft. Creating the draft first makes all three land in the same one.
       - name: Create the draft release
+        if: ${{ !contains(github.ref_name, '-') }}
         shell: bash
         run: |
           if gh api "repos/$GITHUB_REPOSITORY/releases" --jq '.[].tag_name' | grep -qx "$GITHUB_REF_NAME"; then
@@ -46,7 +83,24 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build installer and upload to a draft release
+        if: ${{ !contains(github.ref_name, '-') }}
         run: npm run release:win
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      # Testers on the beta channel only see the closed feed, so the stable goes there too. The server makes it
+      # the current build only if it is newer than the last beta. Skipped (with a warning) without the secret.
+      - name: Copy stable to the closed feed
+        if: ${{ !contains(github.ref_name, '-') }}
+        shell: bash
+        env:
+          TOKEN: ${{ secrets.BETA_UPLOAD_TOKEN }}
+        run: |
+          [ -n "$TOKEN" ] || { echo "::warning::secret BETA_UPLOAD_TOKEN is not set: beta testers won't get this stable"; exit 0; }
+          v="${GITHUB_REF_NAME#v}"
+          exe="gcBuild-Setup-$v.exe"
+          up() { curl -fsS --retry 3 --max-time 900 -X PUT -H "Authorization: Bearer $TOKEN" -T "$1" "$BETA_UPLOAD_URL/$2"; echo; }
+          up "release/$exe" "$exe"
+          up "release/$exe.blockmap" "$exe.blockmap"
+          up release/latest.yml stable.yml
