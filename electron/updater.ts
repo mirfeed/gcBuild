@@ -24,7 +24,8 @@ export type UpdateStatus =
   | { state: 'none'; version: string }
   | { state: 'downloading'; version: string; percent: number }
   | { state: 'ready'; version: string }
-  | { state: 'error'; message: string }
+  /** `version` is set when a download of that version broke off (shown even after a background check) */
+  | { state: 'error'; message: string; version?: string }
   /** beta channel: the server no longer accepts the key (revoked, or the Beta tester role was removed) */
   | { state: 'beta-key-rejected' }
   | { state: 'dev' };
@@ -102,7 +103,9 @@ export function setupUpdater(getWin: () => BrowserWindow | null) {
       autoUpdater.requestHeaders = { authorization: `Bearer ${beta.key}` };
       autoUpdater.allowPrerelease = true;
       autoUpdater.allowDowngrade = false; // after `channel`, which turns it on
-      autoUpdater.disableDifferentialDownload = true; // the beta feed serves whole files only
+      // nginx serves the beta installers with Range requests: only the changed blocks are downloaded
+      // (falls back to the whole installer when the old version's blockmap is no longer on the feed)
+      autoUpdater.disableDifferentialDownload = false;
     } else {
       if (process.env.GCBUILD_UPDATE_URL) autoUpdater.setFeedURL({ provider: 'generic', url: process.env.GCBUILD_UPDATE_URL });
       else autoUpdater.setFeedURL({ provider: 'github', owner: 'mirfeed', repo: 'gcBuild' });
@@ -175,6 +178,8 @@ export function setupUpdater(getWin: () => BrowserWindow | null) {
     if (status.state === 'ready') return; // keep a ready update
     // a revoked key is worth telling about even on a background check
     if (beta.enabled && /\b401\b/.test(message)) return emit({ state: 'beta-key-rejected' });
+    // a download that started and broke off is shown (otherwise the progress bar just vanishes)
+    if (status.state === 'downloading') return emit({ state: 'error', message, version: status.version });
     // no releases yet / offline: not worth bothering the user
     emit({ state: 'error', message });
   });

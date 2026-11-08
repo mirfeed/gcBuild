@@ -498,6 +498,8 @@ export const RU: Record<string, string> = {
   "Beta on. The app is downloading the latest beta; \"Restart to update\" appears when it is ready.": "Бета включена. Программа скачивает последнюю бету; когда она будет готова, появится «Перезапустить и обновить».",
   "Your beta key is no longer accepted, so beta updates have stopped.": "Ключ бета-версии больше не принимается, бета-обновления остановлены.",
   "Beta": "Бета",
+  "Could not download update {v}: {error}. It will be tried again later.": "Не удалось скачать обновление {v}: {error}. Попробую позже ещё раз.",
+  "Try again": "Повторить",
   "This is a beta version ({v}): it may have bugs. Please report them in #beta on the gcBuild Discord.": "Это бета-версия ({v}): в ней могут быть ошибки. Пиши о них в #beta в Discord gcBuild.",
   "Backgrounds: on": "Фоны: вкл",
   "Backgrounds: off": "Фоны: выкл",

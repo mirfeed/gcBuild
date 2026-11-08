@@ -5,7 +5,8 @@ export type UpdateStatus =
   | { state: 'none'; version: string }
   | { state: 'downloading'; version: string; percent: number }
   | { state: 'ready'; version: string }
-  | { state: 'error'; message: string }
+  /** `version` is set when a download of that version broke off (shown even after a background check) */
+  | { state: 'error'; message: string; version?: string }
   /** beta channel: the server no longer accepts the key (revoked, or the Beta tester role was removed) */
   | { state: 'beta-key-rejected' }
   | { state: 'dev' };

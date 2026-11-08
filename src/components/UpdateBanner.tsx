@@ -70,12 +70,24 @@ export function UpdateBanner({ status, onBeta }: { status: UpdateStatus; onBeta?
     case 'none':
       if (manual) body = <span>{t('You have the latest version ({v}).', { v: status.version })}</span>;
       break;
-    case 'error':
-      if (manual) {
+    case 'error': {
+      const error = status.message.split('\n')[0].slice(0, 160);
+      if (status.version) {
+        // a download that broke off: worth showing even after a background check
         tone = 'warn';
-        body = <span>{t('Could not check for updates: {error}', { error: status.message.split('\n')[0].slice(0, 160) })}</span>;
+        body = (
+          <>
+            <span>{t('Could not download update {v}: {error}. It will be tried again later.', { v: status.version, error })}</span>
+            <button type="button" className="btn small" onClick={checkForUpdatesNow}>{t('Try again')}</button>
+            <button type="button" className="btn ghost small" onClick={() => setDismissed(key)}>{t('Later')}</button>
+          </>
+        );
+      } else if (manual) {
+        tone = 'warn';
+        body = <span>{t('Could not check for updates: {error}', { error })}</span>;
       }
       break;
+    }
   }
   if (!body) return null;
   return <div className={`update-banner ${tone}`} role="status">{body}</div>;
