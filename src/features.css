@@ -376,6 +376,17 @@ body:has(.app.fancy) {
   background: linear-gradient(150deg, #34467a, #141a26); color: #e2eaff;
 }
 .tb-right { margin-left: auto; display: flex; align-items: center; gap: 2px; padding-right: 6px; }
+/* pre-release builds only: "Beta 0.1.7-beta.1" */
+.beta-badge {
+  display: inline-flex; align-items: center; height: 20px; padding: 0 8px; margin-right: 6px; border-radius: 10px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.02em; white-space: nowrap; line-height: 1;
+  /* --warn is one amber for both themes: mix in the text colour so the label stays readable on light too */
+  color: color-mix(in srgb, var(--warn) 65%, var(--text)); background: color-mix(in srgb, var(--warn) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--warn) 55%, transparent);
+}
+button.beta-badge { cursor: pointer; }
+button.beta-badge:hover { background: color-mix(in srgb, var(--warn) 26%, transparent); }
+.brand .beta-badge { margin: 0; }
 .app.desktop { padding-top: calc(var(--titlebar-h) + 12px); }
 .app.desktop .modal-back { top: var(--titlebar-h); }
 /* the title bar already shows the logo: the header keeps just the editable project name */

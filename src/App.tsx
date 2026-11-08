@@ -21,7 +21,7 @@ import { openReport } from './lib/report';
 import { desktop } from './lib/desktop';
 import { checkForUpdatesNow, UpdateBanner, useUpdateStatus } from './components/UpdateBanner';
 import { BetaDialog } from './components/BetaDialog';
-import { TitleBar } from './components/TitleBar';
+import { BetaBadge, TitleBar } from './components/TitleBar';
 import { TeamTabs } from './components/TeamTabs';
 import { useLibrary } from './lib/library';
 import { act, emptyProject, exampleProject, uid } from './lib/project';
@@ -360,12 +360,14 @@ export default function App() {
           canRedo={canRedo}
           helpOpen={helpOpen}
           onHelp={() => setHelpOpen((v) => !v)}
+          onBeta={() => setBetaOpen(true)}
         />
       )}
       <header className="app-head">
         <div className="brand">
           <span className="logo">⚔</span>
           <h1>gcBuild</h1>
+          {!desktop && <BetaBadge />}
         </div>
         <input className="project-name" value={project.name} onChange={(e) => update((p) => { p.name = e.target.value; })} aria-label={t('Project name')} />
         <div className="head-actions">
