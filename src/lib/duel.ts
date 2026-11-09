@@ -143,7 +143,7 @@ async function call<T>(route: string, body: Record<string, unknown>): Promise<T>
     throw new Error('Local bridge unreachable.');
   }
   const data = await res.json().catch(() => ({ error: `error ${res.status}` }));
-  if (!res.ok) throw new Error((data as { error?: string }).error ?? `error ${res.status}`);
+  if (!res.ok) throw Object.assign(new Error((data as { error?: string }).error ?? `error ${res.status}`), { status: res.status });
   return data as T;
 }
 

@@ -24,6 +24,7 @@ import { BetaDialog } from './components/BetaDialog';
 import { DuelBar } from './components/DuelBar';
 import { DuelPanel } from './components/DuelPanel';
 import { duelConfig, DUEL_ITERATIONS } from './lib/duel';
+import { useDuelWatcher } from './lib/duelWatch';
 import { BetaBadge, TitleBar } from './components/TitleBar';
 import { TeamTabs } from './components/TeamTabs';
 import { useLibrary } from './lib/library';
@@ -100,6 +101,8 @@ export default function App() {
   const timeline = useMemo(() => simulate(project, loops), [project, loops]);
   // a duel tab: the duel's fixed parts are enforced in the config that is tested and submitted
   const duel = project.duel;
+  // re-run opponents' results even when their duel tab isn't the one open
+  useDuelWatcher(group.teams.flatMap((p) => (p.duel ? [p.duel.key] : [])));
   const config = useMemo(() => {
     try {
       return project.duel ? duelConfig(project) : generateConfig(project);

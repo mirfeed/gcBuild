@@ -40,6 +40,17 @@ export function createDuelApi(gcsim: GcsimApi) {
     return data;
   }
 
+  // a duel tab and the background watcher may ask at the same time: one gcsim run per key
+  const verifying = new Map<string, Promise<unknown>>();
+  function verifyOnce(key: string) {
+    let p = verifying.get(key);
+    if (!p) {
+      p = verify(key).finally(() => verifying.delete(key));
+      verifying.set(key, p);
+    }
+    return p;
+  }
+
   async function verify(key: string) {
     // nothing to re-run (any more): the other re-run may have decided the duel already
     const now = await remote<{ state: string; opponent: { verified: boolean | null } }>('state', key);
@@ -89,7 +100,7 @@ export function createDuelApi(gcsim: GcsimApi) {
         case 'join': return send(res, 200, await remote('join', key, {}));
         case 'state': return send(res, 200, await remote('state', key));
         case 'submit': return send(res, 200, await remote('submit', key, { config: b.config, dps: b.dps, sd: b.sd, chars: b.chars }));
-        case 'verify': return send(res, 200, await verify(key));
+        case 'verify': return send(res, 200, await verifyOnce(key));
       }
       return send(res, 404, { error: 'unknown route' });
     } catch (e) {

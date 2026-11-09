@@ -3,6 +3,7 @@ import { t } from '../i18n';
 import { gcsim } from '../lib/api';
 import { duelApi, duelProblems, type DuelView } from '../lib/duel';
 import { DUEL_GRACE_SECONDS, DUEL_ITERATIONS } from '../lib/duelCode';
+import { needsVerify, verifyDuel } from '../lib/duelWatch';
 import type { Project } from '../lib/types';
 
 interface Props {
@@ -20,7 +21,8 @@ function clock(ms: number) {
 
 /**
  * The duel strip above the team of a duel tab: who against whom, the 15-minute timer (server clock), the submit
- * button, and the result. After both submitted, it re-runs the opponent's config on its own (server/duel.ts).
+ * button, and the result. After both submitted, it re-runs the opponent's config on its own (server/duel.ts); the
+ * same re-run also happens in the background when this tab is closed (lib/duelWatch.ts).
  */
 export function DuelBar({ project, config }: Props) {
   const duel = project.duel!;
@@ -99,11 +101,10 @@ export function DuelBar({ project, config }: Props) {
   // both submitted: re-run the opponent's config (once)
   useEffect(() => {
     if (!view || verifying.current || busy) return;
-    if (!(view.you.submitted && view.opponent.submitted && view.opponent.verified === null)) return;
-    if (view.state !== 'verifying') return;
+    if (!needsVerify(view)) return;
     verifying.current = true;
     setBusy(t("Checking the opponent's result (re-running their config)…"));
-    duelApi.verify(duel.key).then(apply, (e) => {
+    verifyDuel(duel.key).then(apply, (e) => {
       setError((e as Error).message);
       verifying.current = false;
     }).finally(() => setBusy(null));

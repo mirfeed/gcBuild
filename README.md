@@ -131,7 +131,7 @@ duel* with it opens the duel as a locked team tab: only artifacts and the rotati
 fixed (DPS dummy, 5000 iterations, the latest gcsim). Both have 15 minutes to submit. *Base* mode allows any
 number of test sims, *Blind* none: the one final sim is the result. Everything is simulated locally: after both
 submitted, each app re-runs the opponent's config (the rotation never reaches the page or any file, only the DPS
-goes back) and the bot only compares the numbers. The allowed gap is 4 standard errors of the re-run, at least
+goes back; this happens in the background too, with gcBuild open on any tab) and the bot only compares the numbers. The allowed gap is 4 standard errors of the re-run, at least
 0.3%; a larger one voids the duel. The final DPS is the average of both runs; the result card in Discord shows
 both builds but not the rotations. `GCBUILD_DUEL_URL` points the app at another duel server.
 
