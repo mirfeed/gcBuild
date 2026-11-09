@@ -59,6 +59,12 @@ A local web app for building and running [gcsim](https://gcsim.app) configs with
     with its real duration (e.g. Hu Tao's Paramita extended by hitlag), team buffs, E/Q cooldowns, energy and HP
     curves, every hit coloured by element, element applications and reactions on the enemy, and red hatching
     where gcsim waited because an action wasn't ready.
+- **Iansan.** Her burst buff lives on movement, which gcsim doesn't model: without a `movement` param her
+  Nightsoul points drain at 6/s, the buff fades and the burst ends early. With Iansan in the team, every other
+  card gets *🏃 Mobile* (on by default for Varesa, Mavuika, Kinich, Chasca, Ifa): actions of mobile characters
+  get `movement=` in the config (animation length × 15), enough to keep her at 42+ points. The estimate
+  timeline counts her points second by second and shows the buff share (and warns when the burst runs out).
+  An explicit `movement` param on an action wins.
 
 ## Install on a new PC (Windows)
 

@@ -384,7 +384,15 @@ body:has(.app.fancy) {
   color: color-mix(in srgb, var(--warn) 65%, var(--text)); background: color-mix(in srgb, var(--warn) 16%, transparent);
   border: 1px solid color-mix(in srgb, var(--warn) 55%, transparent);
 }
+/* a beta tester on a stable build: same badge, green */
+.beta-badge.stable {
+  color: color-mix(in srgb, var(--ok) 60%, var(--text)); background: color-mix(in srgb, var(--ok) 14%, transparent);
+  border-color: color-mix(in srgb, var(--ok) 50%, transparent);
+}
 button.beta-badge { cursor: pointer; }
+button.beta-badge.stable:hover { background: color-mix(in srgb, var(--ok) 24%, transparent); }
+.foot-version { margin-top: 2px; opacity: 0.8; }
+.foot-version a { color: inherit; }
 button.beta-badge:hover { background: color-mix(in srgb, var(--warn) 26%, transparent); }
 .brand .beta-badge { margin: 0; }
 .app.desktop { padding-top: calc(var(--titlebar-h) + 12px); }

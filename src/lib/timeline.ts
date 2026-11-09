@@ -7,6 +7,7 @@
 import { CHAR_META, SACRIFICIAL_CD, SET_EFFECTS, WEAPON_EFFECTS, type EffectDef, type EffectKind, type Trigger } from '../data/curated';
 import { getChar } from '../data';
 import { attackHitCount, frameSlice, framesUntil, type FrameState } from './frames';
+import { iansanTrack, IANSAN, type IansanStep } from './iansan';
 import { isAction, type ListId } from './rotation';
 import type { ActionType, CharBuild, CharData, Clause, Condition, FrameSlice, Project, RotationAction, RotItem, Section } from './types';
 
@@ -184,6 +185,7 @@ export function simulate(project: Project, loopsToShow: number, opts: SimOpts = 
   const loops = rot.loop.length === 0 ? 0 : rot.loopMode === 'for' ? Math.min(rot.loopCount, loopsToShow) : loopsToShow;
 
   const steps: TLStep[] = [];
+  const iansanSteps: IansanStep[] = [];
   const bars: TLBar[] = [];
   const warnings: string[] = [];
   const loopStarts: { frame: number; label: string }[] = [];
@@ -372,6 +374,8 @@ export function simulate(project: Project, loopsToShow: number, opts: SimOpts = 
       key, actionId: a.id, section, loop: li, char: a.char, action: a.action, label: actionLabel(a, cs.data),
       start, end: t, waited: 0, skipped: false, generic: false, hits: [], warnings: stepWarnings,
     };
+    const uses: number[] = [];
+    iansanSteps.push({ char: a.char, action: a.action, params, uses, skipped: false });
 
     for (let r = 0; r < repeat; r++) {
       let cdEnd = 0;
@@ -410,6 +414,7 @@ export function simulate(project: Project, loopsToShow: number, opts: SimOpts = 
       const fs = override ? { slice: override, generic: true } : frameSlice(cs.data, a.action as ActionType, params, counter, state);
       generic ||= fs.generic;
 
+      uses.push(t);
       fire(cs, triggersFor(a.action as ActionType, params), t);
       if (a.action === 'skill' || a.action === 'burst') {
         bars.push({ lane: a.char, label: `${a.action === 'skill' ? 'E' : 'Q'} CD`, start: t, end: cdEnd, kind: 'cd', source: 'cooldown', char: a.char });
@@ -489,6 +494,18 @@ export function simulate(project: Project, loopsToShow: number, opts: SimOpts = 
       burstIn: Math.max(0, cs.burstReady - t),
     };
   });
+
+  // Iansan: her burst buff over time from the Nightsoul points (lib/iansan.ts)
+  if (states.has(IANSAN)) {
+    const track = iansanTrack(project, iansanSteps, t);
+    for (const s of track?.segments ?? []) {
+      bars.push({ lane: IANSAN, label: `Burst ATK ${Math.round(s.share * 100)}%`, start: s.start, end: s.end, kind: 'buff', source: 'Nightsoul', char: IANSAN });
+    }
+    if (track?.early.length) {
+      const [cast, end] = track.early[0];
+      warnings.push(`Iansan's burst at ${(cast / 60).toFixed(1)}s ends after ${((end - cast) / 60).toFixed(1)}s: her Nightsoul points run out. Only movement of the on-field character refills them (mark mobile characters on their cards).`);
+    }
+  }
 
   const waitedSteps = steps.filter((s) => s.waited > 0 && s.warnings.some((w) => w.includes('cooldown')));
   if (waitedSteps.length) warnings.push(`${waitedSteps.length} action(s) wait for a cooldown. gcsim stalls on those.`);

@@ -115,6 +115,8 @@ export interface CharBuild {
   customStats?: Partial<Record<Stat, number>>;
   /** artifacts mode: a copy of each equipped artifact (so saved builds survive re-imports) */
   gear?: Partial<Record<Slot, Artifact>>;
+  /** with Iansan in the team: this character moves a lot on field and keeps her Nightsoul points up (lib/iansan.ts); unset = default for the character */
+  mobile?: boolean;
   /** where the current liquid substats came from (manual edits / gcsim optimizer aren't flagged as stale) */
   subsFrom?: 'heuristic' | 'gcsim' | 'manual';
 }

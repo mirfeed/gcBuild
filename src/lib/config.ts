@@ -1,6 +1,7 @@
 import { getChar } from '../data';
 import { gearSets, gearStats } from './artifacts';
 import { fmt, mainStatsLine, subStatsLine, SUB_ORDER } from './kqms';
+import { withMovement } from './iansan';
 import { condToScript, isAction, isBlock } from './rotation';
 import type { CharBuild, Project, RotationAction, RotItem, Stat } from './types';
 
@@ -158,8 +159,9 @@ export function generateConfig(p: Project): string {
   }
 
   const keys = new Set(team.map((b) => b.key));
-  const opener = prune(p.rotation.opener, keys);
-  const loop = prune(p.rotation.loop, keys);
+  // Iansan: movement for mobile characters' actions (lib/iansan.ts)
+  const opener = withMovement(prune(p.rotation.opener, keys), p);
+  const loop = withMovement(prune(p.rotation.loop, keys), p);
   const openerLines = itemsToScript(opener, '');
   const loopLines = itemsToScript(loop, '  ');
   // `rot` counts loop iterations (0 = first) for "Rotation #" conditions

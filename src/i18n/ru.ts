@@ -498,6 +498,9 @@ export const RU: Record<string, string> = {
   "Beta on. The app is downloading the latest beta; \"Restart to update\" appears when it is ready.": "Бета включена. Программа скачивает последнюю бету; когда она будет готова, появится «Перезапустить и обновить».",
   "Your beta key is no longer accepted, so beta updates have stopped.": "Ключ бета-версии больше не принимается, бета-обновления остановлены.",
   "Beta": "Бета",
+  "Stable": "Стабильная",
+  "Stable version {v}. Beta versions are on: the next beta arrives as an update.": "Стабильная версия {v}. Бета-версии включены: следующая бета придёт обновлением.",
+  "What changed in this version": "Что изменилось в этой версии",
   "Could not download update {v}: {error}. It will be tried again later.": "Не удалось скачать обновление {v}: {error}. Попробую позже ещё раз.",
   "Try again": "Повторить",
   "This is a beta version ({v}): it may have bugs. Please report them in #beta on the gcBuild Discord.": "Это бета-версия ({v}): в ней могут быть ошибки. Пиши о них в #beta в Discord gcBuild.",
@@ -599,4 +602,9 @@ export const RU: Record<string, string> = {
   "Duel: the squad is fixed, pick your artifacts.": "Дуэль: отряд фиксирован, выбери свои артефакты.",
   "Blind duel: test sims are off. The final sim runs when you submit (duel strip above).": "Blind-дуэль: тестовые симуляции выключены. Финальная симуляция запустится при отправке (полоса дуэли выше).",
   "Duel: the conditions are fixed ({s}s fight, DPS dummy lvl 100 with 10% RES, {n} iterations).": "Дуэль: условия фиксированы (бой {s} с, манекен ур. 100 с 10% сопр., {n} итераций).",
+
+  // ---------------------------------------------------------------- Iansan
+  "Iansan's burst buff lives on the on-field character's movement: standing still drains her Nightsoul points (6/s), the buff fades and at 0 the burst ends. Mark the mobile teammates on their cards; the estimate timeline shows the buff.": "Бафф взрыва стихии Iansan держится на перемещении активного персонажа: на месте её ночные очки тают (6 в секунду), бафф слабеет, а на нуле взрыв заканчивается. Отметь подвижных персонажей на их карточках; бафф виден в оценочной шкале.",
+  "Moves a lot on field (Varesa, Mavuika, Kinich, Chasca, Ifa…) and keeps Iansan's burst buff at full: gcBuild adds movement to this character's actions in the config.": "Много двигается на поле (Varesa, Mavuika, Kinich, Chasca, Ifa…) и держит бафф Iansan полным: gcBuild добавляет перемещение к действиям этого персонажа в конфиге.",
+  "Mobile: keeps Iansan's buff": "Подвижный: держит бафф Iansan",
 };

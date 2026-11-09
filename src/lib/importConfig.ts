@@ -5,6 +5,7 @@
  * while/for loop); everything else is kept verbatim as script blocks.
  */
 import { characters, sets, weapons } from '../data';
+import { stripAutoMovement } from './iansan';
 import { DEFAULT_OPTIONS, uid } from './project';
 import { isAction } from './rotation';
 import type { ActionType, CharBuild, Clause, CmpOp, Condition, Project, RotItem, Stat } from './types';
@@ -425,14 +426,13 @@ export function importConfig(text: string, name = 'Imported team'): ImportResult
   const rawCount = [...items, ...loop].filter((x) => !isAction(x) && x.kind === 'raw').length;
   if (rawCount) warnings.push(`${rawCount} script block(s) kept as raw script`);
 
-  return {
-    project: {
-      name: firstComment || name,
-      team: [...team, ...Array(Math.max(0, 4 - team.length)).fill(null)],
-      active: active || team[0]?.key || '',
-      options,
-      rotation: { opener: items, loop, loopMode, loopCount },
-    },
-    warnings,
+  const project: Project = {
+    name: firstComment || name,
+    team: [...team, ...Array(Math.max(0, 4 - team.length)).fill(null)],
+    active: active || team[0]?.key || '',
+    options,
+    rotation: { opener: items, loop, loopMode, loopCount },
   };
+  // movement gcBuild added for mobile characters (Iansan) stays automatic instead of becoming fixed params
+  return { project: stripAutoMovement(project), warnings };
 }

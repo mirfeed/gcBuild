@@ -25,7 +25,9 @@ import { DuelBar } from './components/DuelBar';
 import { DuelPanel } from './components/DuelPanel';
 import { duelConfig, DUEL_ITERATIONS } from './lib/duel';
 import { useDuelWatcher } from './lib/duelWatch';
+import { hasIansan } from './lib/iansan';
 import { BetaBadge, TitleBar } from './components/TitleBar';
+import { APP_VERSION, IS_PRERELEASE } from './lib/version';
 import { TeamTabs } from './components/TeamTabs';
 import { useLibrary } from './lib/library';
 import { act, emptyProject, exampleProject, uid } from './lib/project';
@@ -386,6 +388,7 @@ export default function App() {
           helpOpen={helpOpen}
           onHelp={() => setHelpOpen((v) => !v)}
           onBeta={() => setBetaOpen(true)}
+          betaOn={betaOn}
         />
       )}
       <header className="app-head">
@@ -602,6 +605,7 @@ export default function App() {
                 usedBy={usedBy}
                 alsoIn={b ? sharing.alsoIn.get(b.key) : undefined}
                 locked={!!duel}
+                iansanTeam={hasIansan(project)}
                 drag={b && !duel ? {
                   onDragStart: (e) => {
                     setDragFrom(i);
@@ -717,8 +721,11 @@ export default function App() {
         )}
       </section>
 
-      <footer className="muted small foot adv">
-        {t('{n} characters. Data, frames and icons come from gcsim. Effect durations in the estimate are hand-curated approximations.', { n: characters.length })}
+      <footer className="muted small foot">
+        <div className="adv">{t('{n} characters. Data, frames and icons come from gcsim. Effect durations in the estimate are hand-curated approximations.', { n: characters.length })}</div>
+        <div className="foot-version">
+          gcBuild {IS_PRERELEASE ? APP_VERSION : <a href={`https://github.com/mirfeed/gcBuild/releases/tag/v${APP_VERSION}`} target="_blank" rel="noreferrer" title={t('What changed in this version')}>{APP_VERSION}</a>}
+        </div>
       </footer>
     </div>
   );

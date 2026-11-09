@@ -8,6 +8,7 @@ import {
 } from '../lib/kqms';
 import { createBuild, defaultRefine } from '../lib/project';
 import { gearSets } from '../lib/artifacts';
+import { IANSAN, isMobile, MOBILE_DEFAULT } from '../lib/iansan';
 import type { SavedBuild } from '../lib/library';
 import { SLOTS, type Artifact, type CharBuild, type ScalingStat, type Slot, type Stat, type SubStat } from '../lib/types';
 import { ArtifactPicker, fmtStat, SHORT, SLOT_LABEL } from './Artifacts';
@@ -67,6 +68,8 @@ interface Props {
   drag?: { onDragStart: (e: DragEvent<HTMLElement>) => void; onDragEnd: () => void };
   /** duel: character, level, constellation, talents and weapon are fixed; only artifacts change */
   locked?: boolean;
+  /** Iansan is in the team: show the "mobile" switch (lib/iansan.ts) */
+  iansanTeam?: boolean;
 }
 
 function StatSelect({ value, options, onChange, disabled }: { value: Stat; options: Stat[]; onChange: (s: Stat) => void; disabled?: boolean }) {
@@ -79,7 +82,7 @@ function StatSelect({ value, options, onChange, disabled }: { value: Stat; optio
   );
 }
 
-export function CharCard({ slot, build, taken, isActive, onChange, onSetActive, onKqms, saved, onSave, inventory, usedBy, alsoIn, drag, locked }: Props) {
+export function CharCard({ slot, build, taken, isActive, onChange, onSetActive, onKqms, saved, onSave, inventory, usedBy, alsoIn, drag, locked, iansanTeam }: Props) {
   const char = build ? getChar(build.key) : undefined;
   const weapon = build ? weaponByKey.get(build.weapon.key) : undefined;
   const color = char ? ELEMENT_COLORS[char.element] : 'var(--border)';
@@ -257,6 +260,21 @@ export function CharCard({ slot, build, taken, isActive, onChange, onSetActive, 
           ))}
         </div>
       )}
+
+      {iansanTeam && (build.key === IANSAN ? (
+        <div className="hint small">{t("Iansan's burst buff lives on the on-field character's movement: standing still drains her Nightsoul points (6/s), the buff fades and at 0 the burst ends. Mark the mobile teammates on their cards; the estimate timeline shows the buff.")}</div>
+      ) : (
+        <label className="check" title={t("Moves a lot on field (Varesa, Mavuika, Kinich, Chasca, Ifa…) and keeps Iansan's burst buff at full: gcBuild adds movement to this character's actions in the config.")}>
+          <input
+            type="checkbox"
+            checked={isMobile(build)}
+            onChange={(e) => set((b) => {
+              if (e.target.checked === MOBILE_DEFAULT.has(b.key)) delete b.mobile;
+              else b.mobile = e.target.checked;
+            })}
+          /> 🏃 {t("Mobile: keeps Iansan's buff")}
+        </label>
+      ))}
 
       {arts ? (
         <div className="sets small">
