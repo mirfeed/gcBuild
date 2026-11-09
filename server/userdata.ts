@@ -6,7 +6,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
-const NAMES = new Set(['artifacts', 'library']);
+const NAMES = new Set(['artifacts', 'library', 'accounts']);
 
 export function createUserdataApi(root: string) {
   const dir = path.join(root, 'userdata');

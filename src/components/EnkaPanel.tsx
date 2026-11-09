@@ -75,17 +75,21 @@ export function EnkaPanel({ project, library, inventory, onUse, onClose }: Props
     setMsg(t('Saved {n} build(s) to My builds.', { n: list.length }));
   };
 
+  // the profile's artifacts are an account of their own (by UID): never merged into a GOOD import
   const addArtifacts = () => {
-    const have = new Set(inventory.items.map(artifactSignature));
-    const fresh = chars.flatMap((c) => c.artifacts).filter((a) => {
+    if (!data) return;
+    const have = new Set<string>();
+    const list = chars.flatMap((c) => c.artifacts).filter((a) => {
       const sig = artifactSignature(a);
       if (have.has(sig)) return false;
       have.add(sig);
       return true;
     });
-    const total = chars.reduce((n, c) => n + c.artifacts.length, 0);
-    inventory.replace([...inventory.items, ...fresh]);
-    setMsg(`${t('Added {n} artifact(s) to the inventory', { n: fresh.length })}${total - fresh.length ? `, ${t('{n} were already there', { n: total - fresh.length })}` : ''}.`);
+    const name = `Enka · ${data.player.nickname ?? data.uid}`;
+    const existing = inventory.accounts.find((a) => a.uid === data.uid);
+    if (existing) inventory.replaceAccount(existing.id, list, { source: 'Enka' });
+    else inventory.addAccount({ name, source: 'Enka', uid: data.uid }, list);
+    setMsg(t('{n} artifact(s) saved as the account «{name}» (Artifacts panel). It is now the selected account.', { n: list.length, name: existing?.name || name }));
   };
 
   return (
@@ -121,7 +125,7 @@ export function EnkaPanel({ project, library, inventory, onUse, onClose }: Props
         <>
           <div className="row tight" style={{ marginBottom: 8 }}>
             <button type="button" className="btn small" onClick={() => save(chars)}>{t('Save all to My builds')}</button>
-            <button type="button" className="btn small" onClick={addArtifacts}>{t('Add their artifacts to the inventory')}</button>
+            <button type="button" className="btn small" onClick={addArtifacts}>{t('Save their artifacts as an account')}</button>
           </div>
           <div className="lib-grid">
             {chars.map((c, i) => {

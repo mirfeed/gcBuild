@@ -4,13 +4,15 @@
  * compares numbers, each player's gcBuild re-runs the opponent's config to check it (server/duel.ts).
  */
 import { characters, getChar, weapons } from '../data';
+import { accountOf } from './artifacts';
 import { generateConfig } from './config';
+import { artifactSignature } from './enka';
 import {
   checkDuelConfig, decodeDuel, DUEL_ITERATIONS, encodeDuel, variantOf,
   type DuelMode, type DuelSettings, type ResolvedChar,
 } from './duelCode';
 import { createBuild, DEFAULT_OPTIONS, emptyProject } from './project';
-import type { CharBuild, DuelInfo, Project, SimOptions } from './types';
+import { SLOTS, type Artifact, type CharBuild, type DuelInfo, type Project, type SimOptions } from './types';
 
 export { decodeDuel, DUEL_ITERATIONS } from './duelCode';
 export type { DuelSettings } from './duelCode';
@@ -97,12 +99,39 @@ export function duelConfig(p: Project): string {
 }
 
 /** Problems that would make the server reject the config (shown before submitting). */
-export function duelProblems(p: Project, config: string): string[] {
+/**
+ * Everything that keeps this duel team from being submitted. `inventory` = every account's artifacts: the whole
+ * team must wear artifacts of one account (one GOOD import / Enka profile), each piece must still be in that
+ * account's current inventory (not a copy kept from an older import or a saved build), and no piece twice.
+ * Honour-based in the end (a GOOD file can be edited), but it rules out mixing several accounts.
+ */
+export function duelProblems(p: Project, config: string, inventory: Artifact[]): string[] {
   if (!p.duel) return [];
   const s = decodeDuel(p.duel.code);
   const problems = checkDuelConfig(config, s, resolveDuel(s));
+  const worn: { who: string; slot: string; a: Artifact }[] = [];
   for (const b of p.team) {
-    if (b && !Object.values(b.gear ?? {}).some(Boolean)) problems.push(`${getChar(b.key)?.name ?? b.key}: no artifacts picked`);
+    if (!b) continue;
+    const who = getChar(b.key)?.name ?? b.key;
+    if (!Object.values(b.gear ?? {}).some(Boolean)) problems.push(`${who}: no artifacts picked`);
+    for (const slot of SLOTS) {
+      const a = b.gear?.[slot];
+      if (a) worn.push({ who, slot, a });
+    }
+  }
+  const accounts = new Set(worn.map((w) => accountOf(w.a)));
+  if (accounts.size > 1) problems.push('Artifacts from different accounts: in a duel the whole team uses one account (Artifacts → Account)');
+  // pieces of each account still in its inventory, by content (ids change on every re-import)
+  const left = new Map<string, number>();
+  for (const a of inventory) {
+    const k = `${accountOf(a)}#${artifactSignature(a)}`;
+    left.set(k, (left.get(k) ?? 0) + 1);
+  }
+  for (const w of worn) {
+    const k = `${accountOf(w.a)}#${artifactSignature(w.a)}`;
+    const n = left.get(k) ?? 0;
+    if (n > 0) left.set(k, n - 1);
+    else problems.push(`${w.who}, ${w.slot}: this artifact isn't in the account's current inventory (or is worn twice): pick it again`);
   }
   return problems;
 }

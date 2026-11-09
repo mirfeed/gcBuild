@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { getChar, setByKey } from '../data';
 import { setIcon } from '../data/icons';
-import { critValue, parseGoodArtifacts, subValue, type Inventory } from '../lib/artifacts';
-import { SLOTS, type Artifact, type Slot, type Stat } from '../lib/types';
+import { accountOf, critValue, parseGoodArtifacts, subValue, type Inventory } from '../lib/artifacts';
+import { SLOTS, type Artifact, type ArtifactAccount, type Slot, type Stat } from '../lib/types';
 import { Icon } from './Combobox';
 import { t } from '../i18n';
 
@@ -162,16 +162,29 @@ export function ArtifactsPanel({ inventory, usedBy, onClose }: { inventory: Inve
   const [paste, setPaste] = useState(false);
   const [text, setText] = useState('');
   const [msg, setMsg] = useState<{ text: string; warnings: string[] } | null>(null);
+  /** a parsed GOOD file waiting for "replace this account" or "new account" */
+  const [pending, setPending] = useState<{ artifacts: Artifact[]; warnings: string[]; source: string } | null>(null);
   const file = useRef<HTMLInputElement>(null);
+  const active = inventory.accounts.find((a) => a.id === inventory.activeId);
+  const accName = (a: ArtifactAccount) => a.name || t('Account {n}', { n: inventory.accounts.indexOf(a) + 1 });
+
+  const done = (p: NonNullable<typeof pending>, into: string) => {
+    setMsg({ text: t('Imported {n} artifacts from {source} into «{account}». Build characters by switching a team card to "Artifacts".', { n: p.artifacts.length, source: p.source, account: into }), warnings: p.warnings });
+    setPending(null);
+    setPaste(false);
+    setText('');
+  };
 
   const doImport = (raw: string) => {
     try {
-      const { artifacts, warnings, source } = parseGoodArtifacts(raw);
-      if (!artifacts.length) throw new Error(t('no artifacts found'));
-      inventory.replace(artifacts);
-      setMsg({ text: t('Imported {n} artifacts from {source}. Build characters by switching a team card to "Artifacts".', { n: artifacts.length, source }), warnings });
-      setPaste(false);
-      setText('');
+      const parsed = parseGoodArtifacts(raw);
+      if (!parsed.artifacts.length) throw new Error(t('no artifacts found'));
+      setMsg(null);
+      if (!inventory.accounts.length) {
+        const name = t('Account {n}', { n: 1 });
+        inventory.addAccount({ name, source: parsed.source }, parsed.artifacts);
+        done(parsed, name);
+      } else setPending(parsed);
     } catch (e) {
       setMsg({ text: t('Could not import: {error}', { error: (e as Error).message }), warnings: [] });
     }
@@ -189,11 +202,6 @@ export function ArtifactsPanel({ inventory, usedBy, onClose }: { inventory: Inve
         <span className="grow" />
         <button type="button" className="btn primary small" onClick={() => file.current?.click()}>{t('Import GOOD file')}</button>
         <button type="button" className="btn ghost small" onClick={() => setPaste((v) => !v)}>{t('Paste GOOD')}</button>
-        {inventory.items.length > 0 && (
-          <button type="button" className="btn ghost small danger" onClick={() => confirm(t('Remove all imported artifacts? Builds keep their own copies.')) && inventory.clear()}>
-            {t('Clear')}
-          </button>
-        )}
         <button type="button" className="icon-btn" onClick={onClose} title={t('Close')}>✕</button>
         <input
           ref={file}
@@ -207,6 +215,53 @@ export function ArtifactsPanel({ inventory, usedBy, onClose }: { inventory: Inve
           }}
         />
       </div>
+      {inventory.accounts.length > 0 && (
+        <div className="row tight acc-bar">
+          <label className="field">
+            <span>{t('Account')}</span>
+            <select value={inventory.activeId ?? ''} onChange={(e) => inventory.setActive(e.target.value)}>
+              {inventory.accounts.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {accName(a)} · {inventory.all.filter((x) => accountOf(x) === a.id).length} · {a.source}
+                </option>
+              ))}
+            </select>
+          </label>
+          {active && (
+            <>
+              <label className="field grow">
+                <span>{t('Name')}</span>
+                <input value={active.name} placeholder={accName(active)} onChange={(e) => inventory.renameAccount(active.id, e.target.value)} />
+              </label>
+              {active.importedAt > 0 && <span className="muted small">{t('imported {d}', { d: new Date(active.importedAt).toLocaleString() })}</span>}
+              <button
+                type="button"
+                className="btn ghost small danger"
+                onClick={() => confirm(t('Delete the account «{name}» and its artifacts? Builds keep their own copies.', { name: accName(active) })) && inventory.removeAccount(active.id)}
+              >
+                {t('Delete account')}
+              </button>
+            </>
+          )}
+        </div>
+      )}
+      <div className="muted small">{t('Each GOOD import or Enka profile is a separate account: artifacts of different accounts are never mixed, builds pick from the selected one.')}</div>
+      {pending && (
+        <div className="hint small lib-result">
+          <div>{t('{n} artifacts from {source}. Where do they go?', { n: pending.artifacts.length, source: pending.source })}</div>
+          <span className="row tight">
+            {active && (
+              <button type="button" className="btn primary small" onClick={() => { inventory.replaceAccount(active.id, pending.artifacts, { source: pending.source }); done(pending, accName(active)); }}>
+                {t('Replace «{name}» (same game account, newer export)', { name: accName(active) })}
+              </button>
+            )}
+            <button type="button" className="btn small" onClick={() => { const name = t('Account {n}', { n: inventory.accounts.length + 1 }); inventory.addAccount({ name, source: pending.source }, pending.artifacts); done(pending, name); }}>
+              {t('New account')}
+            </button>
+            <button type="button" className="btn ghost small" onClick={() => setPending(null)}>{t('Cancel')}</button>
+          </span>
+        </div>
+      )}
       {paste && (
         <div className="lib-paste">
           <textarea className="import-text" spellCheck={false} placeholder='{"format":"GOOD","version":2,"artifacts":[…]}' value={text} onChange={(e) => setText(e.target.value)} />

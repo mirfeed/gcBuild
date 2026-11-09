@@ -6,10 +6,10 @@
  * Main stat values come from gcsim's table (rarity / level), substats are taken
  * as rolled; percent stats are converted to gcsim's fractions.
  */
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useStoredList } from './persist';
 import { artifactMain, characters, sets } from '../data';
-import { SLOTS, type Artifact, type CharBuild, type Slot, type Stat } from './types';
+import { SLOTS, type Artifact, type ArtifactAccount, type CharBuild, type Slot, type Stat } from './types';
 
 const STAT: Record<string, Stat> = {
   hp: 'hp', hp_: 'hp%', atk: 'atk', atk_: 'atk%', def: 'def', def_: 'def%', eleMas: 'em', enerRech_: 'er',
@@ -128,12 +128,83 @@ export function subValue(a: Artifact, stat: Stat): number {
 // ------------------------------------------------------------------ inventory store
 
 const isArtifact = (a: Artifact) => !!a && typeof a.id === 'string' && SLOTS.includes(a.slot);
+const isAccount = (a: ArtifactAccount) => !!a && typeof a.id === 'string' && typeof a.name === 'string';
 
-/** Inventory saved to userdata/artifacts.json (with a browser cache). */
+/** artifacts imported before accounts existed belong to this one */
+export const FIRST_ACCOUNT = 'main';
+export const accountOf = (a: Artifact) => a.account ?? FIRST_ACCOUNT;
+
+/**
+ * Inventory saved to userdata/artifacts.json (+ userdata/accounts.json), with a browser cache.
+ *
+ * Artifacts are grouped in accounts: one GOOD import or one Enka profile each. Imports replace an account or make a
+ * new one, they never merge, and builds pick from the active account only: a team can't be put together from
+ * several game accounts (that matters for duels, see duelProblems in lib/duel.ts).
+ */
 export function useInventory() {
-  const { items, commit, error, backup, restoreBackup, dropBackup } = useStoredList<Artifact>('artifacts', 'gcbuild.artifacts.v1', isArtifact);
-  const replace = useCallback((list: Artifact[]) => commit(() => list), [commit]);
-  return { items, replace, clear: () => replace([]), error, backup, restoreBackup, dropBackup };
+  const store = useStoredList<Artifact>('artifacts', 'gcbuild.artifacts.v1', isArtifact);
+  const acc = useStoredList<ArtifactAccount>('accounts', 'gcbuild.accounts.v1', isAccount);
+  const all = store.items;
+
+  // the stored accounts, plus the first one while it only exists implicitly (artifacts from before accounts)
+  const accounts = useMemo(() => {
+    const list = [...acc.items];
+    if (all.some((a) => accountOf(a) === FIRST_ACCOUNT) && !list.some((a) => a.id === FIRST_ACCOUNT)) {
+      list.unshift({ id: FIRST_ACCOUNT, name: '', source: 'GOOD', importedAt: 0 });
+    }
+    return list;
+  }, [acc.items, all]);
+  const activeId = accounts.find((a) => a.active)?.id ?? accounts[0]?.id ?? null;
+  const items = useMemo(() => all.filter((a) => accountOf(a) === activeId), [all, activeId]);
+
+  const { commit: commitAccounts } = acc;
+  const { commit: commitArtifacts } = store;
+  const saveAccounts = useCallback((fn: (list: ArtifactAccount[]) => ArtifactAccount[]) => commitAccounts(() => fn(accounts)), [commitAccounts, accounts]);
+
+  const setActive = useCallback((id: string) => saveAccounts((l) => l.map((a) => ({ ...a, active: a.id === id }))), [saveAccounts]);
+
+  /** a new import of this account: its artifacts are swapped for `list` */
+  const replaceAccount = useCallback((id: string, list: Artifact[], meta: Partial<ArtifactAccount> = {}) => {
+    commitArtifacts((cur) => [...cur.filter((a) => accountOf(a) !== id), ...list.map((a) => ({ ...a, account: id }))]);
+    saveAccounts((l) => l.map((a) => (a.id === id ? { ...a, ...meta, id, importedAt: Date.now(), active: true } : { ...a, active: false })));
+  }, [commitArtifacts, saveAccounts]);
+
+  /** a new account with these artifacts; it becomes the active one */
+  const addAccount = useCallback((meta: { name: string; source: string; uid?: string }, list: Artifact[]) => {
+    const id = uid();
+    commitArtifacts((cur) => [...cur, ...list.map((a) => ({ ...a, account: id }))]);
+    saveAccounts((l) => [...l.map((a) => ({ ...a, active: false })), { ...meta, id, importedAt: Date.now(), active: true }]);
+    return id;
+  }, [commitArtifacts, saveAccounts]);
+
+  const renameAccount = useCallback((id: string, name: string) => saveAccounts((l) => l.map((a) => (a.id === id ? { ...a, name } : a))), [saveAccounts]);
+
+  const removeAccount = useCallback((id: string) => {
+    commitArtifacts((cur) => cur.filter((a) => accountOf(a) !== id));
+    saveAccounts((l) => {
+      const rest = l.filter((a) => a.id !== id);
+      if (rest.length && !rest.some((a) => a.active)) rest[0] = { ...rest[0], active: true };
+      return rest;
+    });
+  }, [commitArtifacts, saveAccounts]);
+
+  return {
+    /** the active account's artifacts */
+    items,
+    /** every account's artifacts */
+    all,
+    accounts,
+    activeId,
+    setActive,
+    replaceAccount,
+    addAccount,
+    renameAccount,
+    removeAccount,
+    error: store.error ?? acc.error,
+    backup: store.backup,
+    restoreBackup: store.restoreBackup,
+    dropBackup: store.dropBackup,
+  };
 }
 
 export type Inventory = ReturnType<typeof useInventory>;

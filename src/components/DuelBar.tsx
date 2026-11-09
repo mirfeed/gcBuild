@@ -4,12 +4,14 @@ import { gcsim } from '../lib/api';
 import { duelApi, duelProblems, type DuelView } from '../lib/duel';
 import { DUEL_GRACE_SECONDS, DUEL_ITERATIONS } from '../lib/duelCode';
 import { needsVerify, verifyDuel } from '../lib/duelWatch';
-import type { Project } from '../lib/types';
+import type { Artifact, Project } from '../lib/types';
 
 interface Props {
   project: Project;
   /** the duel config (duelConfig(project)) */
   config: string;
+  /** every account's artifacts (the team must come from one account, see duelProblems) */
+  inventory: Artifact[];
 }
 
 const fmtInt = (n: number) => Math.round(n).toLocaleString('en-US');
@@ -24,7 +26,7 @@ function clock(ms: number) {
  * button, and the result. After both submitted, it re-runs the opponent's config on its own (server/duel.ts); the
  * same re-run also happens in the background when this tab is closed (lib/duelWatch.ts).
  */
-export function DuelBar({ project, config }: Props) {
+export function DuelBar({ project, config, inventory }: Props) {
   const duel = project.duel!;
   const [view, setView] = useState<DuelView | null>(null);
   const [offset, setOffset] = useState(0);
@@ -68,7 +70,7 @@ export function DuelBar({ project, config }: Props) {
 
   const submit = useCallback(async (auto = false) => {
     setError(null);
-    const found = duelProblems(project, config);
+    const found = duelProblems(project, config, inventory);
     setProblems(found);
     if (found.length) return;
     if (!auto) {
@@ -89,7 +91,7 @@ export function DuelBar({ project, config }: Props) {
     } finally {
       setBusy(null);
     }
-  }, [apply, config, duel.key, duel.mode, project]);
+  }, [apply, config, duel.key, duel.mode, project, inventory]);
 
   // base mode: time's up and nothing submitted → submit what's there
   useEffect(() => {

@@ -37,7 +37,7 @@ async function writeDisk(name: string, list: unknown[]): Promise<boolean> {
   }
 }
 
-export function useStoredList<T>(name: 'artifacts' | 'library', localKey: string, valid: (x: T) => boolean = () => true) {
+export function useStoredList<T>(name: 'artifacts' | 'library' | 'accounts', localKey: string, valid: (x: T) => boolean = () => true) {
   const [items, setItems] = useState<T[]>(() => readLocal<T>(localKey).filter(valid));
   const [error, setError] = useState<string | null>(null);
   const [backup, setBackup] = useState<T[]>(() => readLocal<T>(`${localKey}.backup`).filter(valid));

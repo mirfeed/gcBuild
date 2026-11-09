@@ -31,7 +31,9 @@ A local web app for building and running [gcsim](https://gcsim.app) configs with
   inventory; only artifacts are read. Switch a team card to *Artifacts* and pick a piece per slot from a
   filterable list (set, main stat, sort by crit value / ER / EM / …; pieces worn by another team member are
   flagged). Stats are exact (main stats from rarity / level, substats as rolled) and set bonuses follow the
-  equipped pieces.
+  equipped pieces. Each GOOD import (or Enka profile) is an **account**: a new import either replaces the
+  selected account (same game account, newer export) or becomes a new one, never merged, and cards pick from the
+  selected account only.
 - **My builds.** Save a team card (💾) to a personal library in the browser and load it back from the card or
   the *My builds* panel. Saved builds keep their own copy of the artifacts, so re-importing doesn't break them.
 - **Target presets.** *gcsim / KQMS default* (a clear particle every 8-12s) or the Miliastra Wonderland
@@ -133,7 +135,8 @@ an update without publishing.
 their own artifacts and rotation. *Create code* turns the open team (characters, levels, constellations, talents,
 weapons) plus the mode and fight duration into a short code (`GD-…`); `/duel code:<code>` in the gcBuild Discord
 posts the challenge. Once accepted, the bot gives each player a personal key (🔑 under the challenge); *Join a
-duel* with it opens the duel as a locked team tab: only artifacts and the rotation can change, sim settings are
+duel* with it opens the duel as a locked team tab: only artifacts and the rotation can change (the whole team from
+one artifact account, every piece still in its current inventory, none twice), sim settings are
 fixed (DPS dummy, 5000 iterations, the latest gcsim). Both have 15 minutes to submit. *Base* mode allows any
 number of test sims, *Blind* none: the one final sim is the result. Everything is simulated locally: after both
 submitted, each app re-runs the opponent's config (the rotation never reaches the page or any file, only the DPS

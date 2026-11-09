@@ -89,6 +89,21 @@ export interface Artifact {
   subs: { stat: Stat; value: number }[];
   /** character wearing it in game, per the GOOD export (informational) */
   location?: string;
+  /** the artifact account (one GOOD import / one Enka profile) it belongs to; unset = the first account */
+  account?: string;
+}
+
+/** One set of artifacts from one game account: a GOOD import or an Enka profile. Accounts are never mixed. */
+export interface ArtifactAccount {
+  id: string;
+  name: string;
+  /** where it came from: the GOOD exporter, or "Enka" */
+  source: string;
+  importedAt: number;
+  /** Enka imports: the game UID (a new Enka import of the same UID replaces this account) */
+  uid?: string;
+  /** the account artifacts are picked from */
+  active?: boolean;
 }
 
 export interface CharBuild {

@@ -547,7 +547,7 @@ export default function App() {
         </div>
       )}
 
-      {duel && <DuelBar key={duel.id} project={project} config={config} />}
+      {duel && <DuelBar key={duel.id} project={project} config={config} inventory={inventory.all} />}
 
       <section className="panel">
         <div className="panel-head">

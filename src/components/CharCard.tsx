@@ -7,7 +7,7 @@ import {
   SUB_ORDER, SUB_VALUES, TOTAL_LIQUID,
 } from '../lib/kqms';
 import { createBuild, defaultRefine } from '../lib/project';
-import { gearSets } from '../lib/artifacts';
+import { accountOf, gearSets } from '../lib/artifacts';
 import { IANSAN, isMobile, MOBILE_DEFAULT } from '../lib/iansan';
 import type { SavedBuild } from '../lib/library';
 import { SLOTS, type Artifact, type CharBuild, type ScalingStat, type Slot, type Stat, type SubStat } from '../lib/types';
@@ -360,6 +360,9 @@ export function CharCard({ slot, build, taken, isActive, onChange, onSetActive, 
               })}
             </div>
             {!inventory.length && <div className="hint small">{t('No artifacts imported yet: open Artifacts in the header and import a GOOD export.')}</div>}
+            {inventory.length > 0 && SLOTS.some((s) => build.gear?.[s] && accountOf(build.gear[s]!) !== accountOf(inventory[0])) && (
+              <div className="hint warn small">{t('Some pieces are from another artifact account than the selected one.')}</div>
+            )}
             {picking && (
               <ArtifactPicker
                 slot={picking}
