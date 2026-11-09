@@ -123,6 +123,18 @@ feed too, so testers get them when they are newer than the last beta. Needs the 
 `GCBUILD_UPDATE_URL=<url>` makes the app read updates from a plain HTTP folder (`latest.yml` + installer) to test
 an update without publishing.
 
+**Duels.** ⚔ *Duels* in the header: two players get the same squad and conditions and compete for DPS with
+their own artifacts and rotation. *Create code* turns the open team (characters, levels, constellations, talents,
+weapons) plus the mode and fight duration into a short code (`GD-…`); `/duel code:<code>` in the gcBuild Discord
+posts the challenge. Once accepted, the bot gives each player a personal key (🔑 under the challenge); *Join a
+duel* with it opens the duel as a locked team tab: only artifacts and the rotation can change, sim settings are
+fixed (DPS dummy, 5000 iterations, the latest gcsim). Both have 15 minutes to submit. *Base* mode allows any
+number of test sims, *Blind* none: the one final sim is the result. Everything is simulated locally: after both
+submitted, each app re-runs the opponent's config (the rotation never reaches the page or any file, only the DPS
+goes back) and the bot only compares the numbers. The allowed gap is 4 standard errors of the re-run, at least
+0.3%; a larger one voids the duel. The final DPS is the average of both runs; the result card in Discord shows
+both builds but not the rotations. `GCBUILD_DUEL_URL` points the app at another duel server.
+
 How it works: `electron/main.ts` runs the same local API as the dev server (`server/*.ts`) on a random
 127.0.0.1 port guarded by a per-launch token; the window loads `app://gcbuild/`, which is proxied to it, so the
 origin (and the browser storage tied to it) never changes and no fixed port can be taken. Links open in the

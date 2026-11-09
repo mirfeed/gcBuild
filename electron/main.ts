@@ -15,6 +15,7 @@ import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import http, { type IncomingMessage, type ServerResponse } from 'node:http';
 import path from 'node:path';
+import { createDuelApi } from '../server/duel';
 import { createEnkaApi } from '../server/enka';
 import { createGcsimApi } from '../server/gcsim';
 import { createTeamsApi } from '../server/teams';
@@ -68,7 +69,8 @@ async function serveStatic(req: IncomingMessage, res: ServerResponse) {
 
 function startServer(): Promise<number> {
   const root = dataRoot();
-  const chain: Middleware[] = [createTeamsApi(root), createUserdataApi(root), createEnkaApi(), createGcsimApi(root)];
+  const gcsim = createGcsimApi(root);
+  const chain: Middleware[] = [createTeamsApi(root), createUserdataApi(root), createEnkaApi(), createDuelApi(gcsim), gcsim];
   const server = http.createServer((req, res) => {
     if (req.headers['x-gcbuild-token'] !== TOKEN) {
       res.writeHead(403).end();

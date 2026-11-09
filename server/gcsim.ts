@@ -304,8 +304,8 @@ export function createGcsimApi(root: string) {
     res.end(JSON.stringify(data));
   }
 
-  /** Connect-style middleware for /api/gcsim/* */
-  return async function middleware(req: IncomingMessage, res: ServerResponse, next: () => void) {
+  /** Connect-style middleware for /api/gcsim/*; `simulate` is also used directly by the duel bridge (server/duel.ts). */
+  return Object.assign(async function middleware(req: IncomingMessage, res: ServerResponse, next: () => void) {
     const url = req.url ?? '';
     if (!url.startsWith('/api/gcsim/')) return next();
     const route = url.slice('/api/gcsim/'.length).split('?')[0];
@@ -324,5 +324,7 @@ export function createGcsimApi(root: string) {
     } catch (e) {
       return send(res, 500, { error: (e as Error).message });
     }
-  };
+  }, { simulate, status });
 }
+
+export type GcsimApi = ReturnType<typeof createGcsimApi>;

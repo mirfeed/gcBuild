@@ -17,6 +17,8 @@ interface Props {
   onResult: (r: Awaited<ReturnType<typeof gcsim.run>>, config: string) => void;
   er: ErStats[] | null;
   setEr: (e: ErStats[] | null) => void;
+  /** duel tab: test sims only (no gcsim update mid-duel, no substat optimizer) */
+  duel?: boolean;
 }
 
 const fmtInt = (n: number) => Math.round(n).toLocaleString('en-US');
@@ -31,7 +33,7 @@ const FAIL_LABEL: Record<string, string> = {
   dash_cd: 'waiting for dash',
 };
 
-export function SimPanel({ project, update, config, result, resultConfig, onResult, er, setEr }: Props) {
+export function SimPanel({ project, update, config, result, resultConfig, onResult, er, setEr, duel }: Props) {
   const [status, setStatus] = useState<GcsimStatus | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -88,7 +90,7 @@ export function SimPanel({ project, update, config, result, resultConfig, onResu
             <>gcsim <b>{status.release.tag ?? 'CLI'}</b> <code className="muted">{status.version.slice(0, 8)}</code></>
           ) : t('gcsim CLI not installed')}
         </span>
-        {status && (
+        {status && !duel && (
           <button type="button" className="btn ghost small" disabled={!!busy} onClick={() => task(t('Downloading gcsim…'), async () => setStatus(await gcsim.download()))}>
             {status.installed ? t('Update gcsim') : t('Download gcsim')}
           </button>
@@ -100,7 +102,7 @@ export function SimPanel({ project, update, config, result, resultConfig, onResu
         <button type="button" className="btn" disabled={!status?.installed || !!busy} onClick={checkEr} title={t('Runs the rotation with bursts on cooldown and measures how much ER each character needs (gcsim optimizer method)')}>
           ⚡ {t('Check ER')}
         </button>
-        <button
+        {!duel && <button
           type="button"
           className="btn adv"
           disabled={!status?.installed || !!busy || !kqmsCount}
@@ -108,7 +110,7 @@ export function SimPanel({ project, update, config, result, resultConfig, onResu
           title={t('gcsim -substatOptim: sim-driven KQMS substats for KQMS characters (overrides the quick heuristic)')}
         >
           {t('gcsim substat optimizer')}
-        </button>
+        </button>}
       </div>
       {busy && <div className="hint small"><span className="spinner" /> {busy}</div>}
       {error && <div className="sim-error small">{error}</div>}

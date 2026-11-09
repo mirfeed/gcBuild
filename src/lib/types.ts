@@ -210,6 +210,21 @@ export interface SimOptions {
   startEnergyZero?: boolean;
 }
 
+/** A team that is a duel (see lib/duel.ts): squad and conditions are fixed, only artifacts and the rotation change. */
+export interface DuelInfo {
+  /** duel id on the server */
+  id: string;
+  /** this player's personal key for the duel (from the bot) */
+  key: string;
+  /** the duel code: squad + conditions */
+  code: string;
+  mode: 'base' | 'blind';
+  duration: number;
+  gcsimVersion: string;
+  you: string;
+  opponent: string;
+}
+
 export interface Project {
   /** stable id within a group (per-team undo history, sim results) */
   id?: string;
@@ -218,4 +233,5 @@ export interface Project {
   active: string;
   options: SimOptions;
   rotation: Rotation;
+  duel?: DuelInfo;
 }

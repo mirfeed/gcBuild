@@ -65,6 +65,8 @@ interface Props {
   alsoIn?: string[];
   /** drag handle to reorder the team (left out for empty slots) */
   drag?: { onDragStart: (e: DragEvent<HTMLElement>) => void; onDragEnd: () => void };
+  /** duel: character, level, constellation, talents and weapon are fixed; only artifacts change */
+  locked?: boolean;
 }
 
 function StatSelect({ value, options, onChange, disabled }: { value: Stat; options: Stat[]; onChange: (s: Stat) => void; disabled?: boolean }) {
@@ -77,7 +79,7 @@ function StatSelect({ value, options, onChange, disabled }: { value: Stat; optio
   );
 }
 
-export function CharCard({ slot, build, taken, isActive, onChange, onSetActive, onKqms, saved, onSave, inventory, usedBy, alsoIn, drag }: Props) {
+export function CharCard({ slot, build, taken, isActive, onChange, onSetActive, onKqms, saved, onSave, inventory, usedBy, alsoIn, drag, locked }: Props) {
   const char = build ? getChar(build.key) : undefined;
   const weapon = build ? weaponByKey.get(build.weapon.key) : undefined;
   const color = char ? ELEMENT_COLORS[char.element] : 'var(--border)';
@@ -143,11 +145,11 @@ export function CharCard({ slot, build, taken, isActive, onChange, onSetActive, 
       >
         {drag && <span className="drag-handle" aria-hidden="true">⠿</span>}
         <Combobox
-          className="char-pick"
+          className={`char-pick ${locked ? 'locked' : ''}`}
           value={build.key}
           options={options}
           variant="grid"
-          onChange={(k) => k !== build.key && onChange(createBuild(k))}
+          onChange={(k) => !locked && k !== build.key && onChange(createBuild(k))}
           renderValue={() => (
             <span className="combo-value">
               <span className="avatar-wrap" style={{ ['--el' as string]: color }}>
@@ -166,7 +168,7 @@ export function CharCard({ slot, build, taken, isActive, onChange, onSetActive, 
           {isActive ? '★' : '☆'}
         </button>
         <button type="button" className="icon-btn" title={t('Save to My builds')} onClick={onSave}>💾</button>
-        <button type="button" className="icon-btn" title={t('Remove')} onClick={() => onChange(null)}>✕</button>
+        {!locked && <button type="button" className="icon-btn" title={t('Remove')} onClick={() => onChange(null)}>✕</button>}
       </div>
       {alsoIn && alsoIn.length > 0 && <div className="also-in small">⚠ {t('also in team {teams}', { teams: alsoIn.join(', ') })}</div>}
       {saved.length > 0 && (
@@ -175,7 +177,9 @@ export function CharCard({ slot, build, taken, isActive, onChange, onSetActive, 
           value=""
           onChange={(e) => {
             const s = saved.find((x) => x.id === e.target.value);
-            if (s) onChange({ ...structuredClone(s.build), uid: build.uid });
+            // duel: only the saved build's artifacts are taken
+            if (s && locked) onChange({ ...build, statsMode: 'artifacts', gear: structuredClone(s.build.gear ?? {}) });
+            else if (s) onChange({ ...structuredClone(s.build), uid: build.uid });
           }}
         >
           <option value="">{t('📂 Load a saved build ({n})…', { n: saved.length })}</option>
@@ -191,11 +195,11 @@ export function CharCard({ slot, build, taken, isActive, onChange, onSetActive, 
       <div className="row">
         <label className="field narrow adv">
           <span>{t('Lvl')}</span>
-          <input value={build.level} onChange={(e) => set((b) => { b.level = e.target.value; })} />
+          <input value={build.level} disabled={locked} onChange={(e) => set((b) => { b.level = e.target.value; })} />
         </label>
         <label className="field narrow">
           <span>{t('Cons')}</span>
-          <select value={build.cons} onChange={(e) => set((b) => { b.cons = +e.target.value; })}>
+          <select value={build.cons} disabled={locked} onChange={(e) => set((b) => { b.cons = +e.target.value; })}>
             {[0, 1, 2, 3, 4, 5, 6].map((c) => <option key={c} value={c}>C{c}</option>)}
           </select>
         </label>
@@ -209,6 +213,7 @@ export function CharCard({ slot, build, taken, isActive, onChange, onSetActive, 
                 min={1}
                 max={10}
                 value={tv}
+                disabled={locked}
                 onChange={(e) => set((b) => { b.talents[i] = Math.max(1, Math.min(10, +e.target.value || 1)); })}
               />
             ))}
@@ -220,20 +225,21 @@ export function CharCard({ slot, build, taken, isActive, onChange, onSetActive, 
         <label className="field grow">
           <span>{t('Weapon')}</span>
           <Combobox
+            className={locked ? 'locked' : undefined}
             value={build.weapon.key}
             options={weaponOptions}
             variant="grid"
-            onChange={(k) => set((b) => { b.weapon = { key: k, refine: defaultRefine(k), level: '90/90', params: {} }; })}
+            onChange={(k) => !locked && set((b) => { b.weapon = { key: k, refine: defaultRefine(k), level: '90/90', params: {} }; })}
           />
         </label>
         <label className="field narrow">
           <span>{t('Ref')}</span>
-          <select value={build.weapon.refine} onChange={(e) => set((b) => { b.weapon.refine = +e.target.value; })}>
+          <select value={build.weapon.refine} disabled={locked} onChange={(e) => set((b) => { b.weapon.refine = +e.target.value; })}>
             {[1, 2, 3, 4, 5].map((r) => <option key={r} value={r}>R{r}</option>)}
           </select>
         </label>
       </div>
-      {weapon && Object.keys(weapon.params).length > 0 && (
+      {!locked && weapon && Object.keys(weapon.params).length > 0 && (
         <div className="row params adv">
           {Object.entries(weapon.params).map(([k, desc]) => (
             <label key={k} className="field narrow" title={desc}>
@@ -290,13 +296,13 @@ export function CharCard({ slot, build, taken, isActive, onChange, onSetActive, 
       <div className="kqms">
         <div className="kqms-head">
           <span className="seg">
-            <button type="button" className={mode === 'kqms' ? 'on' : ''} onClick={() => mode === 'kqms' || set((b) => { Object.assign(b, generateKqms({ ...b, statsMode: 'kqms' }, char, weapon)); b.statsMode = 'kqms'; })}>
+            <button type="button" className={mode === 'kqms' ? 'on' : ''} disabled={locked} onClick={() => mode === 'kqms' || set((b) => { Object.assign(b, generateKqms({ ...b, statsMode: 'kqms' }, char, weapon)); b.statsMode = 'kqms'; })}>
               KQMS
             </button>
             <button type="button" className={arts ? 'on' : ''} onClick={() => arts || set((b) => { b.statsMode = 'artifacts'; b.gear = b.gear ?? {}; })}>
               {t('Artifacts')}
             </button>
-            <button type="button" className={custom ? 'on' : ''} onClick={() => custom || set((b) => {
+            <button type="button" className={custom ? 'on' : ''} disabled={locked} onClick={() => custom || set((b) => {
               // freeze the current KQMS artifact stats as editable numbers
               b.statsMode = 'custom';
               b.customStats = customFromKqms(build);

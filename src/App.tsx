@@ -21,6 +21,9 @@ import { openReport } from './lib/report';
 import { desktop } from './lib/desktop';
 import { checkForUpdatesNow, UpdateBanner, useUpdateStatus } from './components/UpdateBanner';
 import { BetaDialog } from './components/BetaDialog';
+import { DuelBar } from './components/DuelBar';
+import { DuelPanel } from './components/DuelPanel';
+import { duelConfig, DUEL_ITERATIONS } from './lib/duel';
 import { BetaBadge, TitleBar } from './components/TitleBar';
 import { TeamTabs } from './components/TeamTabs';
 import { useLibrary } from './lib/library';
@@ -76,6 +79,7 @@ export default function App() {
   const [artsOpen, setArtsOpen] = useState(false);
   const [teamsOpen, setTeamsOpen] = useState(false);
   const [enkaOpen, setEnkaOpen] = useState(false);
+  const [duelOpen, setDuelOpen] = useState(false);
   const inventory = useInventory();
   const fileInput = useRef<HTMLInputElement>(null);
   const advanced = useAdvanced();
@@ -94,7 +98,15 @@ export default function App() {
   const lang = useLang();
 
   const timeline = useMemo(() => simulate(project, loops), [project, loops]);
-  const config = useMemo(() => generateConfig(project), [project]);
+  // a duel tab: the duel's fixed parts are enforced in the config that is tested and submitted
+  const duel = project.duel;
+  const config = useMemo(() => {
+    try {
+      return project.duel ? duelConfig(project) : generateConfig(project);
+    } catch {
+      return generateConfig(project);
+    }
+  }, [project]);
   const taken = project.team.filter(Boolean).map((b) => b!.key);
 
   const teamLabel = (p: Project, i: number) => p.name || t('Team {n}', { n: i + 1 });
@@ -210,6 +222,16 @@ export default function App() {
   /** Put a library build into the team: the same character's slot, the given slot, or the first free one. */
   const applyBuild = (b: CharBuild, slot?: number) => {
     const same = project.team.findIndex((x) => x?.key === b.key);
+    if (duel) {
+      // duel: the squad is fixed, only a build's artifacts are taken (for the same character)
+      const cur = project.team[same];
+      if (!cur || b.statsMode !== 'artifacts') {
+        setImportMsg([t('In a duel only the artifacts of the same character can be used.')]);
+        return;
+      }
+      setMember(same, { ...cur, statsMode: 'artifacts', gear: structuredClone(b.gear ?? {}) });
+      return;
+    }
     let i = same >= 0 ? same : slot ?? project.team.findIndex((x) => !x);
     if (i < 0) i = 3;
     setMember(i, { ...b, uid: uid() });
@@ -390,6 +412,9 @@ export default function App() {
           <button type="button" className={`btn ghost ${enkaOpen ? 'on' : ''}`} onClick={() => setEnkaOpen((v) => !v)} title={t('Import characters from Enka.Network by UID')}>
             Enka
           </button>
+          <button type="button" className={`btn ghost ${duelOpen ? 'on' : ''}`} onClick={() => setDuelOpen((v) => !v)} title={t('Duels: same squad, your artifacts and rotation against another player')}>
+            ⚔ {t('Duels')}
+          </button>
           <Menu
             label="⋯"
             title={t('More')}
@@ -466,6 +491,17 @@ export default function App() {
           onClose={() => setTeamsOpen(false)}
         />
       )}
+      {duelOpen && (
+        <DuelPanel
+          project={project}
+          onJoined={(p) => {
+            const i = group.teams.findIndex((x) => x.duel?.id === p.duel?.id);
+            if (i >= 0) setActive(i);
+            else addTeam(p);
+          }}
+          onClose={() => setDuelOpen(false)}
+        />
+      )}
       {enkaOpen && <EnkaPanel project={project} library={library} inventory={inventory} onUse={applyBuild} onClose={() => setEnkaOpen(false)} />}
       {artsOpen && <ArtifactsPanel inventory={inventory} usedBy={usedBy} onClose={() => setArtsOpen(false)} />}
       {libOpen && <LibraryPanel library={library} project={project} onUse={applyBuild} onClose={() => setLibOpen(false)} />}
@@ -505,22 +541,30 @@ export default function App() {
         </div>
       )}
 
+      {duel && <DuelBar key={duel.id} project={project} config={config} />}
+
       <section className="panel">
         <div className="panel-head">
           <button type="button" className="collapse" onClick={() => setTeamOpen((v) => !v)} aria-expanded={teamOpen}>
             <span className="caret">{teamOpen ? '▾' : '▸'}</span> <h2>{t('Team')}</h2>
           </button>
-          <span className="muted small adv">{t('Level 90/90, talents 9/9/9, 5★ C0 / 4★ C6, 5★ weapons R1 / 4★ R5 by default')}</span>
+          {duel ? (
+            <span className="muted small">{t('Duel: the squad is fixed, pick your artifacts.')}</span>
+          ) : (
+            <span className="muted small adv">{t('Level 90/90, talents 9/9/9, 5★ C0 / 4★ C6, 5★ weapons R1 / 4★ R5 by default')}</span>
+          )}
           <span className="grow" />
-          <button
-            type="button"
-            className="btn primary"
-            disabled={!project.team.some((b) => b && b.statsMode !== 'custom')}
-            onClick={() => update((p) => p.team.forEach((_, i) => kqmsSlot(p, i)))}
-            title={t('Allocate KQMS substats for every KQMS character')}
-          >
-            {t('Generate KQMS for team')}
-          </button>
+          {!duel && (
+            <button
+              type="button"
+              className="btn primary"
+              disabled={!project.team.some((b) => b && b.statsMode !== 'custom')}
+              onClick={() => update((p) => p.team.forEach((_, i) => kqmsSlot(p, i)))}
+              title={t('Allocate KQMS substats for every KQMS character')}
+            >
+              {t('Generate KQMS for team')}
+            </button>
+          )}
         </div>
         {teamOpen && (
           <div className="team-grid">
@@ -554,7 +598,8 @@ export default function App() {
                 inventory={inventory.items}
                 usedBy={usedBy}
                 alsoIn={b ? sharing.alsoIn.get(b.key) : undefined}
-                drag={b ? {
+                locked={!!duel}
+                drag={b && !duel ? {
                   onDragStart: (e) => {
                     setDragFrom(i);
                     e.dataTransfer.effectAllowed = 'move';
@@ -604,19 +649,24 @@ export default function App() {
           <h2>{t('Simulate')}</h2>
           <span className="muted small adv">{t('Runs the config with the local gcsim CLI.')} <kbd>Ctrl+Enter</kbd> {t('runs the sim.')}</span>
         </div>
-        <SimPanel
-          project={project}
-          update={update}
-          config={config}
-          result={sim?.result ?? null}
-          resultConfig={sim?.config ?? null}
-          onResult={(r, cfg) => {
-            setSim({ result: r.result, timeline: parseSample(r.sample), config: cfg });
-            setTlView('sim');
-          }}
-          er={er}
-          setEr={setEr}
-        />
+        {duel?.mode === 'blind' ? (
+          <div className="muted small">{t('Blind duel: test sims are off. The final sim runs when you submit (duel strip above).')}</div>
+        ) : (
+          <SimPanel
+            project={project}
+            update={update}
+            config={config}
+            result={sim?.result ?? null}
+            resultConfig={sim?.config ?? null}
+            onResult={(r, cfg) => {
+              setSim({ result: r.result, timeline: parseSample(r.sample), config: cfg });
+              setTlView('sim');
+            }}
+            er={er}
+            setEr={setEr}
+            duel={!!duel}
+          />
+        )}
       </section>
 
       <section className="panel">
@@ -657,7 +707,11 @@ export default function App() {
           <h2>{t('Sim settings')}</h2>
           <span className="muted small simple-only">{t('Target, energy and duration. Turn on Advanced for every option and the raw gcsim config.')}</span>
         </div>
-        <ConfigPanel project={project} update={update} />
+        {duel ? (
+          <div className="muted small">{t('Duel: the conditions are fixed ({s}s fight, DPS dummy lvl 100 with 10% RES, {n} iterations).', { s: duel.duration, n: DUEL_ITERATIONS })}</div>
+        ) : (
+          <ConfigPanel project={project} update={update} />
+        )}
       </section>
 
       <footer className="muted small foot adv">

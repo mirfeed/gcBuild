@@ -452,3 +452,20 @@ button.beta-badge:hover { background: color-mix(in srgb, var(--warn) 26%, transp
 .drag-handle { pointer-events: none; }
 .team-tab.dragging { opacity: 0.45; }
 .team-tab.drop-target { outline: 2px dashed var(--accent); outline-offset: 2px; }
+
+/* ---------------------------------------------------------------- duels */
+.duel-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+.duel-col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.duel-col h3 { margin: 0; font-size: 14px; }
+.duel-squad { display: flex; flex-wrap: wrap; gap: 8px; }
+.duel-member { display: flex; align-items: center; gap: 6px; padding: 4px 8px 4px 4px; border: 1px solid var(--border); border-radius: 8px; line-height: 1.25; }
+.duel-code { font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; min-width: 0; }
+.duel-bar { border-color: color-mix(in srgb, var(--accent) 55%, var(--border)); }
+.duel-bar.over { border-color: var(--border); }
+.duel-status { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; }
+.duel-dps { font-weight: 600; }
+.duel-timer { font-variant-numeric: tabular-nums; font-size: 18px; font-weight: 600; }
+.duel-timer.warn { color: var(--warn); }
+.duel-outcome { font-weight: 600; }
+.pill { display: inline-block; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--border); }
+.combo.locked, .char-pick.locked { pointer-events: none; }
