@@ -1,3 +1,4 @@
+import appIcon from '../../build/icon.png';
 import { t } from '../i18n';
 import { APP_VERSION, IS_PRERELEASE } from '../lib/version';
 
@@ -44,7 +45,7 @@ export function TitleBar({ title, onUndo, onRedo, canUndo, canRedo, helpOpen, on
       <button type="button" className="tb-btn" onClick={onUndo} disabled={!canUndo} title={t('Undo (Ctrl+Z)')} aria-label={t('Undo (Ctrl+Z)')}>←</button>
       <button type="button" className="tb-btn" onClick={onRedo} disabled={!canRedo} title={t('Redo (Ctrl+Y)')} aria-label={t('Redo (Ctrl+Y)')}>→</button>
       <div className="tb-title">
-        <span className="tb-logo">⚔</span>
+        <img className="tb-logo" src={appIcon} alt="" draggable={false} />
         <span>{title || 'gcBuild'}</span>
       </div>
       <div className="tb-right">

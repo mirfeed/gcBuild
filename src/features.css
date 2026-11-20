@@ -372,8 +372,7 @@ body:has(.app.fancy) {
 }
 .tb-title span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tb-logo {
-  width: 20px; height: 20px; border-radius: 6px; display: grid; place-items: center; font-size: 12px; flex: none;
-  background: linear-gradient(150deg, #34467a, #141a26); color: #e2eaff;
+  width: 20px; height: 20px; border-radius: 6px; display: block; object-fit: cover; flex: none;
 }
 .tb-right { margin-left: auto; display: flex; align-items: center; gap: 2px; padding-right: 6px; }
 /* pre-release builds only: "Beta 0.1.7-beta.1" */
