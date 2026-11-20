@@ -120,6 +120,8 @@ function createWindow() {
     title: 'gcBuild', backgroundColor: nativeTheme.shouldUseDarkColors ? '#0f1218' : '#f3f5f9', autoHideMenuBar: true, show: false,
     // no system title bar: the page draws its own (see TitleBar.tsx), Windows keeps snap layouts
     titleBarStyle: 'hidden', titleBarOverlay: overlay(),
+    // window/taskbar icon: the same artwork as build/icon.ico (which electron-builder uses for the exe,
+    // the installer and the shortcut), kept as PNG here because nativeImage loads PNG reliably
     icon: path.join(__dirname, '..', 'build', 'icon.png'),
     webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true },
   });
