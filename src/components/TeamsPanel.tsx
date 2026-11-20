@@ -1,22 +1,10 @@
 import { useEffect, useState } from 'react';
 import { t } from '../i18n';
 import { generateConfig } from '../lib/config';
+import { IS_WEB_LITE } from '../lib/platform';
 import { toGroup, type Group } from '../lib/store';
+import { callTeams as call, type TeamFile } from '../lib/teamsStore';
 import type { Project } from '../lib/types';
-
-interface TeamFile {
-  name: string;
-  modified: number;
-}
-
-async function call<T>(route: string, body?: unknown): Promise<T> {
-  const res = await fetch(`/api/teams/${route}`, body === undefined
-    ? undefined
-    : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-  const data = await res.json().catch(() => ({ error: `error ${res.status}` }));
-  if (!res.ok) throw new Error(data.error ?? `error ${res.status}`);
-  return data as T;
-}
 
 interface Props {
   group: Group;
@@ -58,7 +46,7 @@ export function TeamsPanel({ group, onLoadGroup, onAddTeams, onRenameGroup, onCl
       }));
       const r = await call<{ name: string; path: string }>('save', { name: n, project: data, config: configs[0].text, configs: multi ? configs : undefined });
       if (multi) onRenameGroup(n);
-      setMsg(t('Saved to {path}', { path: r.path }));
+      setMsg(IS_WEB_LITE ? t('Saved to this browser.') : t('Saved to {path}', { path: r.path }));
       refresh();
     } catch (e) {
       setMsg(t('Could not save: {error}', { error: (e as Error).message }));
@@ -75,7 +63,9 @@ export function TeamsPanel({ group, onLoadGroup, onAddTeams, onRenameGroup, onCl
     <section className="panel library">
       <div className="panel-head">
         <h2>{t('Teams')}</h2>
-        <span className="muted small">{dir ? <>{t('saved in')} <code>{dir}</code></> : t('teams/ folder of the project')}</span>
+        <span className="muted small">
+          {IS_WEB_LITE ? t('saved in this browser') : dir ? <>{t('saved in')} <code>{dir}</code></> : t('teams/ folder of the project')}
+        </span>
         <span className="grow" />
         <input className="lib-search" value={name} onChange={(e) => setName(e.target.value)} placeholder={multi ? t('group name') : t('team name')} />
         <button type="button" className="btn primary small" onClick={save}>

@@ -4,6 +4,7 @@
  * inventory. Mirrors gcsim's EnkaToGOOD conversion.
  */
 import { artifactMain, characters, sets, weapons } from '../data';
+import { IS_WEB_LITE } from './platform';
 import { createBuild, uid } from './project';
 import { SLOTS, type Artifact, type CharBuild, type Slot, type Stat } from './types';
 
@@ -172,9 +173,43 @@ export function artifactSignature(a: Artifact): string {
   return `${a.set}|${a.slot}|${a.rarity}|${a.level}|${a.main}|${subs}`;
 }
 
-export async function fetchEnka(uidStr: string): Promise<EnkaResponse> {
-  const res = await fetch(`/api/enka/${uidStr}`);
+async function getJson<T>(url: string): Promise<T> {
+  const res = await fetch(url);
   const data = await res.json().catch(() => ({ error: `error ${res.status}` }));
-  if (!res.ok) throw new Error(data.error ?? `error ${res.status}`);
-  return data as EnkaResponse;
+  if (!res.ok) throw new Error((data as { error?: string }).error ?? `error ${res.status}`);
+  return data as T;
+}
+
+/** The API's own answer (before server/enka.ts turns it into EnkaResponse). */
+interface EnkaRaw {
+  playerInfo?: EnkaResponse['player'];
+  avatarInfoList?: EnkaAvatar[];
+  ttl?: number;
+  owner?: { username?: string; hash?: string };
+}
+
+export async function fetchEnka(uidStr: string): Promise<EnkaResponse> {
+  // desktop / local server: the bridge caches and does the profile lookup
+  if (!IS_WEB_LITE) return getJson<EnkaResponse>(`/api/enka/${uidStr}`);
+  // Web Lite: the site's nginx proxies <base>enka/ to https://enka.network/api/ (the API sends no CORS headers).
+  // Same shape as server/enka.ts: the showcase plus the builds saved on a linked Enka profile.
+  const api = `${import.meta.env.BASE_URL}enka/`;
+  const d = await getJson<EnkaRaw>(`${api}uid/${encodeURIComponent(uidStr)}`);
+  const avatars: EnkaAvatar[] = [...(d.avatarInfoList ?? [])];
+  if (d.owner?.username && d.owner.hash) {
+    try {
+      const builds = await getJson<Record<string, { live?: boolean; name?: string; avatar_data: EnkaAvatar }[]>>(
+        `${api}profile/${encodeURIComponent(d.owner.username)}/hoyos/${encodeURIComponent(d.owner.hash)}/builds/`,
+      );
+      for (const list of Object.values(builds)) {
+        for (const b of list) {
+          if (b.live) continue;
+          avatars.push({ ...b.avatar_data, buildName: b.name ?? 'saved build' });
+        }
+      }
+    } catch {
+      // the showcase alone is still useful
+    }
+  }
+  return { uid: uidStr, player: d.playerInfo ?? {}, ttl: d.ttl ?? 60, avatars };
 }

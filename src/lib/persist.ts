@@ -2,8 +2,13 @@
  * A list stored in the project's userdata/ folder (via the local server), with
  * localStorage as an offline cache. On first run, data found only in this
  * browser's localStorage is moved to disk.
+ *
+ * Web Lite has no local server: the list lives in localStorage only (no requests, no "server unreachable").
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { IS_WEB_LITE } from './platform';
+
+const WEB = IS_WEB_LITE;
 
 function readLocal<T>(key: string): T[] {
   try {
@@ -46,6 +51,7 @@ export function useStoredList<T>(name: 'artifacts' | 'library' | 'accounts', loc
 
   // load from disk; migrate browser-only data on the first run
   useEffect(() => {
+    if (WEB) return;
     let cancelled = false;
     fetch(`/api/userdata/${name}`)
       .then((r) => r.json())
@@ -77,6 +83,10 @@ export function useStoredList<T>(name: 'artifacts' | 'library' | 'accounts', loc
     current.current = next;
     setItems(next);
     const local = writeLocal(localKey, next);
+    if (WEB) {
+      setError(local ? null : 'Could not save the data in this browser.');
+      return;
+    }
     writeDisk(name, next).then((ok) => {
       setError(ok ? null : local ? 'Could not save to the userdata folder: kept in this browser only.' : 'Could not save the data anywhere.');
     });

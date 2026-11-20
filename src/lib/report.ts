@@ -5,6 +5,7 @@
  */
 import { gcsim } from './api';
 import { desktop } from './desktop';
+import { IS_WEB_LITE } from './platform';
 
 export const REPO = 'mirfeed/gcBuild';
 export const ISSUES_URL = `https://github.com/${REPO}/issues`;
@@ -23,13 +24,17 @@ export interface ReportInput {
 
 export async function environment(): Promise<string> {
   let sim = 'unknown';
-  try {
-    const s = await gcsim.status();
-    sim = s.installed ? `${s.release.tag ?? '?'} (${s.version.split('\n')[0] || '?'})` : 'not installed';
-  } catch {
-    sim = 'bridge not reachable';
+  if (IS_WEB_LITE) sim = 'not used (web version)';
+  else {
+    try {
+      const s = await gcsim.status();
+      sim = s.installed ? `${s.release.tag ?? '?'} (${s.version.split('\n')[0] || '?'})` : 'not installed';
+    } catch {
+      sim = 'bridge not reachable';
+    }
   }
-  return [`- gcBuild: ${__APP_VERSION__}${desktop ? ' (desktop app)' : ''}`, `- gcsim: ${sim}`, `- Browser: ${navigator.userAgent}`, `- Page: ${location.host}`].join('\n');
+  const kind = desktop ? ' (desktop app)' : IS_WEB_LITE ? ' (web version)' : '';
+  return [`- gcBuild: ${__APP_VERSION__}${kind}`, `- gcsim: ${sim}`, `- Browser: ${navigator.userAgent}`, `- Page: ${location.host}`].join('\n');
 }
 
 const fence = (lang: string, text: string) => `\`\`\`${lang}\n${text.trim()}\n\`\`\``;

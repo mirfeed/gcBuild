@@ -4,6 +4,10 @@ import { getLang, t } from '../i18n';
 interface Step {
   title: string;
   body: ReactNode;
+  /** needs a local gcsim: not shown in Web Lite */
+  noWeb?: boolean;
+  /** what the step says in Web Lite instead (defaults to body) */
+  webBody?: ReactNode;
 }
 
 const STEPS: Record<'en' | 'ru', { steps: Step[]; tips: ReactNode[] }> = {
@@ -38,6 +42,7 @@ const STEPS: Record<'en' | 'ru', { steps: Step[]; tips: ReactNode[] }> = {
       },
       {
         title: 'Запуск',
+        noWeb: true,
         body: (
           <>
             Один раз нажмите «Скачать gcsim», затем «Запустить сим» (Ctrl+Enter): появятся ДПС, вклад каждого и реакции.
@@ -53,10 +58,14 @@ const STEPS: Record<'en' | 'ru', { steps: Step[]; tips: ReactNode[] }> = {
             энергия и баффы. Тяните мышью, Ctrl+колёсико — масштаб, «Вписать» — показать целиком.
           </>
         ),
+        webBody: (
+          <>Таймлайн обновляется на ходу, пока собираете ротацию. Тяните мышью, Ctrl+колёсико — масштаб, «Вписать» — показать целиком.</>
+        ),
       },
       {
         title: 'Сохранение',
         body: <>💾 на карточке — билд в «Мои билды». «Отряды» — сохранить весь отряд. Всё хранится на этом компьютере.</>,
+        webBody: <>💾 на карточке — билд в «Мои билды». «Отряды» сохраняют отряд в этом браузере; копию можно скачать кнопкой «Загрузить .txt».</>,
       },
     ],
     tips: [
@@ -97,6 +106,7 @@ const STEPS: Record<'en' | 'ru', { steps: Step[]; tips: ReactNode[] }> = {
       },
       {
         title: 'Run',
+        noWeb: true,
         body: (
           <>
             Click “Download gcsim” once, then “Run sim” (Ctrl+Enter) for DPS, each character&apos;s share and reactions. “Check ER”
@@ -112,10 +122,12 @@ const STEPS: Record<'en' | 'ru', { steps: Step[]; tips: ReactNode[] }> = {
             pan, Ctrl+wheel to zoom, “Fit” to see everything.
           </>
         ),
+        webBody: <>The timeline updates while you build. Drag to pan, Ctrl+wheel to zoom, “Fit” to see everything.</>,
       },
       {
         title: 'Saving',
         body: <>💾 on a card saves the build to My builds. “Teams” saves the whole team. Everything stays on this computer.</>,
+        webBody: <>💾 on a card saves the build to My builds. “Teams” keeps the team in this browser; Export downloads a copy.</>,
       },
     ],
     tips: [
@@ -146,9 +158,10 @@ export function markHelpSeen() {
   }
 }
 
-/** Short step-by-step guide in the current language. */
-export function HelpPanel({ onClose }: { onClose: () => void }) {
+/** Short step-by-step guide in the current language. `webLite`: skip the steps that need a local gcsim. */
+export function HelpPanel({ onClose, webLite }: { onClose: () => void; webLite?: boolean }) {
   const { steps, tips } = STEPS[getLang()];
+  const shown = steps.filter((s) => !(webLite && s.noWeb));
   return (
     <section className="panel help">
       <div className="panel-head">
@@ -157,12 +170,12 @@ export function HelpPanel({ onClose }: { onClose: () => void }) {
         <button type="button" className="icon-btn" onClick={onClose} title={t('Close')}>✕</button>
       </div>
       <ol className="help-steps">
-        {steps.map((s, i) => (
+        {shown.map((s, i) => (
           <li key={i}>
             <span className="help-num">{i + 1}</span>
             <div>
               <b>{s.title}</b>
-              <p>{s.body}</p>
+              <p>{webLite && s.webBody ? s.webBody : s.body}</p>
             </div>
           </li>
         ))}

@@ -26,6 +26,7 @@ import { DuelPanel } from './components/DuelPanel';
 import { duelConfig, DUEL_ITERATIONS } from './lib/duel';
 import { useDuelWatcher } from './lib/duelWatch';
 import { hasIansan } from './lib/iansan';
+import { IS_WEB_LITE } from './lib/platform';
 import { BetaBadge, TitleBar } from './components/TitleBar';
 import { APP_VERSION, IS_PRERELEASE } from './lib/version';
 import { TeamTabs } from './components/TeamTabs';
@@ -103,8 +104,8 @@ export default function App() {
   const timeline = useMemo(() => simulate(project, loops), [project, loops]);
   // a duel tab: the duel's fixed parts are enforced in the config that is tested and submitted
   const duel = project.duel;
-  // re-run opponents' results even when their duel tab isn't the one open
-  useDuelWatcher(group.teams.flatMap((p) => (p.duel ? [p.duel.key] : [])));
+  // re-run opponents' results even when their duel tab isn't the one open (Web Lite has no duels)
+  useDuelWatcher(IS_WEB_LITE ? [] : group.teams.flatMap((p) => (p.duel ? [p.duel.key] : [])));
   const config = useMemo(() => {
     try {
       return project.duel ? duelConfig(project) : generateConfig(project);
@@ -406,7 +407,7 @@ export default function App() {
               <span className="head-sep" />
             </>
           )}
-          <button type="button" className={`btn ghost ${teamsOpen ? 'on' : ''}`} onClick={() => setTeamsOpen((v) => !v)} title={t("Save / load teams in the project's teams/ folder")}>
+          <button type="button" className={`btn ghost ${teamsOpen ? 'on' : ''}`} onClick={() => setTeamsOpen((v) => !v)} title={IS_WEB_LITE ? t('Saved teams are kept in this browser') : t("Save / load teams in the project's teams/ folder")}>
             {t('Teams')}
           </button>
           <button type="button" className={`btn ghost ${artsOpen ? 'on' : ''}`} onClick={() => setArtsOpen((v) => !v)}>
@@ -418,9 +419,11 @@ export default function App() {
           <button type="button" className={`btn ghost ${enkaOpen ? 'on' : ''}`} onClick={() => setEnkaOpen((v) => !v)} title={t('Import characters from Enka.Network by UID')}>
             Enka
           </button>
-          <button type="button" className={`btn ghost ${duelOpen ? 'on' : ''}`} onClick={() => setDuelOpen((v) => !v)} title={t('Duels: same squad, your artifacts and rotation against another player')}>
-            ⚔ {t('Duels')}
-          </button>
+          {!IS_WEB_LITE && (
+            <button type="button" className={`btn ghost ${duelOpen ? 'on' : ''}`} onClick={() => setDuelOpen((v) => !v)} title={t('Duels: same squad, your artifacts and rotation against another player')}>
+              ⚔ {t('Duels')}
+            </button>
+          )}
           <Menu
             label="⋯"
             title={t('More')}
@@ -455,6 +458,17 @@ export default function App() {
           {!desktop && (
             <button type="button" className={`btn ghost help-btn ${helpOpen ? 'on' : ''}`} onClick={() => setHelpOpen((v) => !v)} title={t('How to use')}>?</button>
           )}
+          {IS_WEB_LITE && (
+            <a
+              className="btn ghost"
+              href="https://github.com/mirfeed/gcBuild/releases/latest"
+              target="_blank"
+              rel="noreferrer"
+              title={t('Download the desktop app for Windows')}
+            >
+              {t('Windows app')}
+            </a>
+          )}
           <span className="head-sep" />
           <span className="seg theme-switch" role="group" aria-label={t('Theme')}>
             {([['system', '◐', t('Theme: like the system')], ['dark', '☾', t('Theme: dark')], ['light', '☀', t('Theme: light')]] as [Theme, string, string][]).map(([id, icon, label]) => (
@@ -486,7 +500,7 @@ export default function App() {
 
       <UpdateBanner status={update$} onBeta={() => setBetaOpen(true)} />
       {betaOpen && <BetaDialog onClose={() => setBetaOpen(false)} onChange={setBetaOn} />}
-      {helpOpen && <HelpPanel onClose={() => setHelpOpen(false)} />}
+      {helpOpen && <HelpPanel webLite={IS_WEB_LITE} onClose={() => setHelpOpen(false)} />}
       {importOpen && <ImportBox onImport={doImport} onClose={() => setImportOpen(false)} />}
       {teamsOpen && (
         <TeamsPanel
@@ -497,7 +511,7 @@ export default function App() {
           onClose={() => setTeamsOpen(false)}
         />
       )}
-      {duelOpen && (
+      {!IS_WEB_LITE && duelOpen && (
         <DuelPanel
           project={project}
           onJoined={(p) => {
@@ -547,7 +561,7 @@ export default function App() {
         </div>
       )}
 
-      {duel && <DuelBar key={duel.id} project={project} config={config} inventory={inventory.all} />}
+      {!IS_WEB_LITE && duel && <DuelBar key={duel.id} project={project} config={config} inventory={inventory.all} />}
 
       <section className="panel">
         <div className="panel-head">
@@ -651,40 +665,44 @@ export default function App() {
         />
       </section>
 
-      <section className="panel">
-        <div className="panel-head">
-          <h2>{t('Simulate')}</h2>
-          <span className="muted small adv">{t('Runs the config with the local gcsim CLI.')} <kbd>Ctrl+Enter</kbd> {t('runs the sim.')}</span>
-        </div>
-        {duel?.mode === 'blind' ? (
-          <div className="muted small">{t('Blind duel: test sims are off. The final sim runs when you submit (duel strip above).')}</div>
-        ) : (
-          <SimPanel
-            project={project}
-            update={update}
-            config={config}
-            result={sim?.result ?? null}
-            resultConfig={sim?.config ?? null}
-            onResult={(r, cfg) => {
-              setSim({ result: r.result, timeline: parseSample(r.sample), config: cfg });
-              setTlView('sim');
-            }}
-            er={er}
-            setEr={setEr}
-            duel={!!duel}
-          />
-        )}
-      </section>
+      {!IS_WEB_LITE && (
+        <section className="panel">
+          <div className="panel-head">
+            <h2>{t('Simulate')}</h2>
+            <span className="muted small adv">{t('Runs the config with the local gcsim CLI.')} <kbd>Ctrl+Enter</kbd> {t('runs the sim.')}</span>
+          </div>
+          {duel?.mode === 'blind' ? (
+            <div className="muted small">{t('Blind duel: test sims are off. The final sim runs when you submit (duel strip above).')}</div>
+          ) : (
+            <SimPanel
+              project={project}
+              update={update}
+              config={config}
+              result={sim?.result ?? null}
+              resultConfig={sim?.config ?? null}
+              onResult={(r, cfg) => {
+                setSim({ result: r.result, timeline: parseSample(r.sample), config: cfg });
+                setTlView('sim');
+              }}
+              er={er}
+              setEr={setEr}
+              duel={!!duel}
+            />
+          )}
+        </section>
+      )}
 
       <section className="panel">
         <div className="panel-head">
           <h2>{t('Timeline')}</h2>
-          <span className="seg">
-            <button type="button" className={tlView === 'estimate' ? 'on' : ''} onClick={() => setTlView('estimate')}>{t('Estimate')}</button>
-            <button type="button" className={tlView === 'sim' ? 'on' : ''} onClick={() => setTlView('sim')} disabled={!sim}>
-              {t('gcsim sample')}{sim && sim.config !== config ? ` (${t('outdated')})` : ''}
-            </button>
-          </span>
+          {!IS_WEB_LITE && (
+            <span className="seg">
+              <button type="button" className={tlView === 'estimate' ? 'on' : ''} onClick={() => setTlView('estimate')}>{t('Estimate')}</button>
+              <button type="button" className={tlView === 'sim' ? 'on' : ''} onClick={() => setTlView('sim')} disabled={!sim}>
+                {t('gcsim sample')}{sim && sim.config !== config ? ` (${t('outdated')})` : ''}
+              </button>
+            </span>
+          )}
           <span className="muted small adv">
             {tlView === 'estimate'
               ? t('Planned from gcsim frame data and cooldowns while you build. No hitlag, energy or HP: run the sim for the real thing.')
@@ -724,6 +742,7 @@ export default function App() {
       <footer className="muted small foot">
         <div className="adv">{t('{n} characters. Data, frames and icons come from gcsim. Effect durations in the estimate are hand-curated approximations.', { n: characters.length })}</div>
         <div className="foot-version">
+          {IS_WEB_LITE && <>{' '}<a href="/" title={t('Back to the gcBuild site')}>{t('gcBuild site')}</a> ·{' '}</>}
           gcBuild {IS_PRERELEASE ? APP_VERSION : <a href={`https://github.com/mirfeed/gcBuild/releases/tag/v${APP_VERSION}`} target="_blank" rel="noreferrer" title={t('What changed in this version')}>{APP_VERSION}</a>}
         </div>
       </footer>
